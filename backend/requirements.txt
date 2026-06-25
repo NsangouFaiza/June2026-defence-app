@@ -1,0 +1,32 @@
+# Core Django
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-filter==23.5
+
+# JWT Authentication
+djangorestframework-simplejwt==5.3.0
+
+# WebSocket (real-time chat)
+channels==4.0.0
+daphne==4.0.0
+
+# API Documentation — see API_DOCUMENTATION.md (Swagger optional; Django app named
+# `requests` conflicts with PyPI `requests` required by drf-spectacular)
+
+# Email
+django-anymail==10.2
+
+# Utilities
+python-decouple==3.8
+Pillow>=10.4.0
+
+# Firebase Admin (push notifications - optional)
+firebase-admin>=6.2.0
+
+# Development
+django-debug-toolbar==4.2.0
+
+# Production
+gunicorn==21.2.0
+psycopg2-binary==2.9.9
