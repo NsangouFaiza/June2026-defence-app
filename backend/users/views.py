@@ -23,6 +23,7 @@ User = get_user_model()
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom token view using our serializer."""
+    permission_classes = [permissions.AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
 
 
@@ -33,10 +34,29 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        # Send verification email
-        send_verification_email(user)
+        user.is_verified = True
+        user.save()
+        
+        try:
+            send_verification_email(user)
+        except Exception:
+            pass
+            
+        refresh = RefreshToken.for_user(user)
         return Response(
-            {'message': 'User registered successfully. Please check your email to verify your account.'},
+            {
+                'message': 'User registered successfully.',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'full_name': user.full_name,
+                    'role': user.role,
+                    'blood_group': user.blood_group,
+                    'language': user.language,
+                }
+            },
             status=status.HTTP_201_CREATED
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

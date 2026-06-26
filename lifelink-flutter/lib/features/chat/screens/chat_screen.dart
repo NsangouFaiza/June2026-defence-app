@@ -7,6 +7,10 @@ import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/message_repository.dart';
 import '../../../../data/models/conversation_model.dart';
 import '../../../../data/models/message_model.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final int? conversationId;
@@ -28,6 +32,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   int? _conversationId;
   List<MessageModel> _messages = [];
   bool _isLoading = true;
+  WebSocket? _webSocket;
+  StreamSubscription? _webSocketSubscription;
 
   @override
   void initState() {
@@ -35,6 +41,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (widget.conversationId != null) {
       _conversationId = widget.conversationId;
       _loadMessages();
+      _connectWebSocket();
     } else if (widget.otherUserId != null) {
       _createConversation();
     }
@@ -46,6 +53,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final conversation = await messageRepo.getOrCreateConversation(widget.otherUserId!);
       setState(() => _conversationId = conversation.id);
       await _loadMessages();
+      _connectWebSocket();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,11 +80,67 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Future<void> _connectWebSocket() async {
+    if (_conversationId == null) return;
+
+    _webSocket?.close();
+    _webSocketSubscription?.cancel();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null) return;
+
+      String host = 'localhost';
+      try {
+        if (Platform.isAndroid) {
+          host = '10.0.2.2';
+        }
+      } catch (_) {}
+      final wsUrl = 'ws://$host:8000/ws/chat/$_conversationId/?token=$token';
+      _webSocket = await WebSocket.connect(wsUrl);
+
+      _webSocketSubscription = _webSocket!.listen(
+        (data) {
+          final Map<String, dynamic> payload = json.decode(data);
+          if (payload['type'] == 'message') {
+            final messageData = payload['message'];
+            final message = MessageModel.fromJson(messageData);
+
+            if (!_messages.any((m) => m.id == message.id)) {
+              setState(() {
+                _messages.add(message);
+              });
+              _scrollToBottom();
+            }
+          }
+        },
+        onError: (err) {
+          debugPrint('WebSocket error: $err');
+        },
+        onDone: () {
+          debugPrint('WebSocket closed');
+        },
+      );
+    } catch (e) {
+      debugPrint('Failed to connect to WebSocket: $e');
+    }
+  }
+
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty || _conversationId == null) return;
 
     _messageController.clear();
+
+    if (_webSocket != null && _webSocket!.readyState == WebSocket.open) {
+      _webSocket!.add(json.encode({
+        'type': 'message',
+        'content': content,
+      }));
+      return;
+    }
+
     final messageRepo = ref.read(messageRepositoryProvider);
     try {
       final message = await messageRepo.sendMessage(_conversationId!, content);
@@ -106,6 +170,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final localization = ref.watch(localizationServiceProvider);
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final myId = currentUserAsync.value?.id ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -131,7 +197,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               itemCount: _messages.length,
                               itemBuilder: (context, index) {
                                 final message = _messages[index];
-                                final isMe = message.senderId != 1; // Replace with current user ID
+                                final isMe = message.senderId == myId;
                                 return _buildMessageBubble(context, message, isMe);
                               },
                             ),
@@ -231,6 +297,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _webSocket?.close();
+    _webSocketSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

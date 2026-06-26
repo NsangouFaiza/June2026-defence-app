@@ -28,6 +28,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
+    final localization = ref.read(localizationServiceProvider);
 
     setState(() => _isLoading = true);
 
@@ -39,7 +40,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
         );
       }
     } finally {
@@ -66,10 +67,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!_isEmailSent) ...[
-                  Icon(
-                    Icons.lock_reset_outlined,
-                    size: 80.w,
-                    color: AppTheme.primaryColor,
+                  Center(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 100.h,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   SizedBox(height: 24.h),
                   Text(
@@ -86,17 +89,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   SizedBox(height: 32.h),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
+                    decoration: InputDecoration(
+                      labelText: localization.translate('email'),
+                      prefixIcon: const Icon(Icons.email_outlined),
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return localization.translate('please_enter_email');
                       }
                       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return 'Please enter a valid email';
+                        return localization.translate('please_enter_valid_email');
                       }
                       return null;
                     },

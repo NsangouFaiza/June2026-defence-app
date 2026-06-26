@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../data/models/user_model.dart';
@@ -114,24 +115,46 @@ class ProfileSettingsScreen extends ConsumerWidget {
                     title: Text(localization.translate('push_notifications')),
                     subtitle: const Text('Receive push notifications'),
                     value: user.notificationPreferences ?? true,
-                    onChanged: (value) {
-                      // Update notification preferences
+                    onChanged: (value) async {
+                      try {
+                        await ref.read(authRepositoryProvider).updateProfile({
+                          'notification_preferences': value,
+                        });
+                        ref.invalidate(currentUserProvider);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                   SwitchListTile(
                     title: Text(localization.translate('email_notifications')),
                     subtitle: const Text('Receive email notifications'),
                     value: user.emailNotifications ?? true,
-                    onChanged: (value) {
-                      // Update email notifications
+                    onChanged: (value) async {
+                      try {
+                        await ref.read(authRepositoryProvider).updateProfile({
+                          'email_notifications': value,
+                        });
+                        ref.invalidate(currentUserProvider);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                   SwitchListTile(
                     title: Text(localization.translate('dark_mode')),
                     subtitle: const Text('Enable dark mode'),
-                    value: false, // Get from theme provider
+                    value: ref.watch(themeModeProvider) == ThemeMode.dark,
                     onChanged: (value) {
-                      // Toggle dark mode
+                      ref.read(themeModeProvider.notifier).toggleTheme(value);
                     },
                   ),
                 ],
@@ -148,7 +171,35 @@ class ProfileSettingsScreen extends ConsumerWidget {
               subtitle: Text(user.language == 'fr' ? 'Français' : 'English'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                // Change language
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(localization.translate('language')),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('English 🇬🇧'),
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            await ref.read(localizationProvider.notifier).changeLanguage('en');
+                            await ref.read(authRepositoryProvider).updateProfile({'language': 'en'});
+                            ref.invalidate(currentUserProvider);
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('Français 🇫🇷'),
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            await ref.read(localizationProvider.notifier).changeLanguage('fr');
+                            await ref.read(authRepositoryProvider).updateProfile({'language': 'fr'});
+                            ref.invalidate(currentUserProvider);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               },
             ),
           ),
@@ -184,8 +235,9 @@ class ProfileSettingsScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               await ref.read(authRepositoryProvider).logout();
+              ref.invalidate(currentUserProvider);
               if (context.mounted) {
-                // Navigate to login
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
             style: ElevatedButton.styleFrom(

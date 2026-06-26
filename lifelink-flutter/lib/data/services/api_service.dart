@@ -1,10 +1,19 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000/api';
-  static const String tokenKey = 'auth_token';
+  static String get baseUrl {
+    // 10.0.2.2 is the special IP address to reach the host's localhost from Android emulator
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2:8000/api';
+      }
+    } catch (_) {}
+    return 'http://localhost:8000/api';
+  }
+  static const String tokenKey = 'access_token';
 
   late final Dio _dio;
   final Ref? ref;

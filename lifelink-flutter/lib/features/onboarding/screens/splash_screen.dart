@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/auth_repository.dart';
+import '../../../../core/utils/role_router.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -33,7 +34,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     if (isLoggedIn) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      try {
+        final user = await authRepo.getCurrentUser();
+        if (mounted) {
+          final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
+          Navigator.of(context).pushReplacementNamed(route);
+        }
+      } catch (e) {
+        await authRepo.logout();
+        ref.invalidate(currentUserProvider);
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+      }
     } else if (hasSeenOnboarding) {
       Navigator.of(context).pushReplacementNamed('/login');
     } else {
@@ -52,19 +65,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             children: [
               // Logo
               Container(
-                width: 120.w,
-                height: 120.w,
-                decoration: const BoxDecoration(
+                width: 160.w,
+                height: 160.w,
+                decoration: BoxDecoration(
                   color: Colors.white,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(24.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  Icons.favorite,
-                  size: 80.w,
-                  color: AppTheme.primaryColor,
+                padding: EdgeInsets.all(16.w),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
-              SizedBox(height: 24.h),
+              SizedBox(height: 32.h),
               Text(
                 'LifeLink',
                 style: TextStyle(

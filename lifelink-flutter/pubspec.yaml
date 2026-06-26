@@ -56,6 +56,7 @@ dependencies:
   flutter_svg: ^2.0.9
   shimmer: ^3.0.0
   fluttertoast: ^8.2.4
+  url_launcher: ^6.2.5
 
   # Charts
   fl_chart: ^0.66.2

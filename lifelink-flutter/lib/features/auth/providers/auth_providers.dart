@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../data/models/user_model.dart';
+import '../../../core/providers/providers.dart';
 
 // Auth Repository Provider
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -10,7 +11,16 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 // Current User Provider
 final currentUserProvider = FutureProvider<UserModel?>((ref) async {
   final authRepo = ref.watch(authRepositoryProvider);
-  return await authRepo.getCurrentUser();
+  final user = await authRepo.getCurrentUser();
+  if (user != null) {
+    final localLanguage = ref.read(localizationProvider).languageCode;
+    if (user.language != localLanguage) {
+      Future.microtask(() {
+        ref.read(localizationProvider.notifier).changeLanguage(user.language);
+      });
+    }
+  }
+  return user;
 });
 
 // Is Authenticated Provider

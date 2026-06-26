@@ -38,5 +38,14 @@ class Payment(models.Model):
             models.Index(fields=['transaction_id']),
         ]
 
+    def save(self, *args, **kwargs):
+        is_success_flow = (self.status == 'SUCCESS')
+        super().save(*args, **kwargs)
+        if is_success_flow:
+            req = self.blood_request
+            req.payment_status = 'PAID'
+            req.payment_reference = self.transaction_id
+            req.save(update_fields=['payment_status', 'payment_reference'])
+
     def __str__(self):
         return f"{self.user.email} - {self.amount} ({self.status})"

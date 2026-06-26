@@ -19,7 +19,18 @@ class AdminPanelScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(localization.translate('admin_panel')),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/logo.png',
+                height: 32.h,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(width: 8.w),
+              Text(localization.translate('admin_panel')),
+            ],
+          ),
           bottom: TabBar(
             tabs: [
               Tab(text: localization.translate('users')),

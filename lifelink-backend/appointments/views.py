@@ -17,6 +17,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     filterset_fields = ['donor', 'hospital', 'status', 'scheduled_date']
     search_fields = ['donor__user__first_name', 'donor__user__last_name', 'hospital__name']
 
+    def perform_create(self, serializer):
+        from donors.models import Donor
+        try:
+            donor = Donor.objects.get(user=self.request.user)
+            serializer.save(donor=donor)
+        except Donor.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'User is not registered as a Donor.'})
+
     @action(detail=False, methods=['get'])
     def my_appointments(self, request):
         """Get current user's appointments."""
@@ -103,5 +112,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointment = self.get_object()
         appointment.status = 'COMPLETED'
         appointment.save()
+
+        # Auto-create completed donation record
+        from donations.models import Donation
+        donation, created = Donation.objects.get_or_create(
+            appointment=appointment,
+            defaults={
+                'donor': appointment.donor,
+                'hospital': appointment.hospital,
+                'blood_group': appointment.donor.user.blood_group or 'O+',
+                'quantity_ml': 450,
+                'status': 'COMPLETED',
+                'screened_by': request.user,
+                'is_usable': True,
+            }
+        )
+        if not created and donation.status != 'COMPLETED':
+            donation.status = 'COMPLETED'
+            donation.save()
+
         serializer = self.get_serializer(appointment)
         return Response(serializer.data)

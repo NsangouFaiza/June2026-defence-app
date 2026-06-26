@@ -7,6 +7,16 @@ from .models import BloodInventory
 from .serializers import BloodInventorySerializer
 
 
+class IsStaffOrTechnicianOrAdmin(permissions.BasePermission):
+    """Permission class to restrict inventory management to lab technicians, hospital staff, and admins."""
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and (
+            request.user.role in ('lab_technician', 'hospital_staff', 'blood_bank_admin', 'system_admin')
+            or request.user.is_staff
+        )
+
+
 class BloodInventoryViewSet(viewsets.ModelViewSet):
     """ViewSet for BloodInventory model."""
 
@@ -19,7 +29,7 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'search']:
             return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
+        return [IsStaffOrTechnicianOrAdmin()]
 
     @action(detail=False, methods=['get'])
     def search(self, request):

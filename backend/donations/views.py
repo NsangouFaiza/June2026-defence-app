@@ -15,6 +15,12 @@ class DonationViewSet(viewsets.ModelViewSet):
     filterset_fields = ['donor', 'hospital', 'status']
     search_fields = ['donor__user__first_name', 'donor__user__last_name', 'hospital__name']
 
+    def perform_create(self, serializer):
+        if self.request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only lab technicians and administrators can record donations.')
+        serializer.save(screened_by=self.request.user)
+
     @action(detail=False, methods=['get'])
     def my_donations(self, request):
         """Get current donor's donation history."""
@@ -50,6 +56,20 @@ class DonationViewSet(viewsets.ModelViewSet):
         donation.screening_notes = request.data.get('screening_notes', '')
         donation.is_usable = request.data.get('is_usable', True)
         donation.status = 'COMPLETED' if donation.is_usable else 'REJECTED'
+        donation.save()
+        serializer = self.get_serializer(donation)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def verify(self, request, pk=None):
+        """Verify donation (sets is_usable to True, status to COMPLETED)."""
+        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        donation = self.get_object()
+        donation.screened_by = request.user
+        donation.is_usable = True
+        donation.status = 'COMPLETED'
         donation.save()
         serializer = self.get_serializer(donation)
         return Response(serializer.data)

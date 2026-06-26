@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 
@@ -161,10 +162,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Expanded(
                     flex: _currentPage > 0 ? 1 : 2,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (_currentPage == _pages.length - 1) {
-                          // Navigate to language selection
-                          Navigator.of(context).pushReplacementNamed('/language');
+                          // Navigate to login screen directly
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('has_seen_onboarding', true);
+                          if (mounted) {
+                            Navigator.of(context).pushReplacementNamed('/login');
+                          }
                         } else {
                           _pageController.nextPage(
                             duration: const Duration(milliseconds: 300),

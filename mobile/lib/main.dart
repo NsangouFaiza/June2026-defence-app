@@ -39,6 +39,9 @@ import 'features/donor/screens/eligibility_check_screen.dart';
 import 'features/donor/screens/donation_history_screen.dart';
 import 'features/lab/screens/lab_dashboard_screen.dart';
 import 'features/payment/screens/payment_screen.dart';
+import 'core/providers/theme_provider.dart';
+import 'features/patient/screens/blood_requests_list_screen.dart';
+import 'core/widgets/role_guard.dart';
 
 void main() {
   runApp(
@@ -54,6 +57,7 @@ class LifeLinkApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localizationProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return ScreenUtilInit(
       designSize: const Size(375, 812),
@@ -65,7 +69,7 @@ class LifeLinkApp extends ConsumerWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.system,
+          themeMode: themeMode,
           locale: locale,
           supportedLocales: const [
             Locale('en', ''),
@@ -85,34 +89,53 @@ class LifeLinkApp extends ConsumerWidget {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
-            '/home': (context) => const HomeDashboardScreen(),
-            '/donor-dashboard': (context) => const DonorDashboardScreen(),
-            '/patient-dashboard': (context) => const PatientDashboardScreen(),
-            '/hospital-dashboard': (context) => const HospitalDashboardScreen(),
-            '/lab-dashboard': (context) => const LabDashboardScreen(),
+            '/home': (context) => const RoleGuard(allowedRoles: [], child: HomeDashboardScreen()),
+            '/donor-dashboard': (context) => const RoleGuard(allowedRoles: ['donor'], child: DonorDashboardScreen()),
+            '/patient-dashboard': (context) => const RoleGuard(allowedRoles: ['patient'], child: PatientDashboardScreen()),
+            '/hospital-dashboard': (context) => const RoleGuard(allowedRoles: ['hospital_staff', 'blood_bank_staff'], child: HospitalDashboardScreen()),
+            '/lab-dashboard': (context) => const RoleGuard(allowedRoles: ['lab_technician'], child: LabDashboardScreen()),
             '/blood-inventory': (context) => const BloodInventoryScreen(),
             '/blood-request': (context) => const BloodRequestScreen(),
+            '/blood-requests': (context) => const BloodRequestsListScreen(),
             '/blood-search': (context) => const BloodSearchScreen(),
             '/emergency-request': (context) => const EmergencyRequestScreen(),
             '/donor-list': (context) => const DonorListScreen(),
-            '/donor-details': (context) => const DonorDetailsScreen(donorId: 0),
-            '/chat': (context) => const ChatScreen(),
+            '/donor-details': (context) {
+              final donorId = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+              return DonorDetailsScreen(donorId: donorId);
+            },
+            '/chat': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              return ChatScreen(
+                conversationId: args?['conversationId'] as int?,
+                otherUserId: args?['otherUserId'] as int?,
+              );
+            },
             '/notifications': (context) => const NotificationsScreen(),
             '/hospital-locator': (context) => const HospitalLocatorScreen(),
             '/book-appointment': (context) => const AppointmentBookingScreen(),
             '/appointment-history': (context) => const AppointmentHistoryScreen(),
             '/campaigns': (context) => const CampaignsScreen(),
-            '/campaign-details': (context) => const CampaignDetailsScreen(campaignId: 0),
+            '/campaign-details': (context) {
+              final campaignId = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+              return CampaignDetailsScreen(campaignId: campaignId);
+            },
             '/campaign-feed': (context) => const CampaignFeedScreen(),
             '/profile': (context) => const ProfileSettingsScreen(),
             '/rewards': (context) => const RewardsScreen(),
             '/leaderboard': (context) => const LeaderboardScreen(),
             '/impact-statistics': (context) => const ImpactStatisticsScreen(),
             '/reports': (context) => const ReportsScreen(),
-            '/admin-panel': (context) => const AdminPanelScreen(),
+            '/admin-panel': (context) => const RoleGuard(allowedRoles: ['system_admin', 'blood_bank_admin'], child: AdminPanelScreen()),
             '/eligibility-check': (context) => const EligibilityCheckScreen(),
             '/donation-history': (context) => const DonationHistoryScreen(),
-            '/payment': (context) => const PaymentScreen(requestId: 0, amount: 0),
+            '/payment': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              return PaymentScreen(
+                requestId: args?['requestId'] as int? ?? 0,
+                amount: args?['amount'] as double? ?? 0.0,
+              );
+            },
           },
         );
       },

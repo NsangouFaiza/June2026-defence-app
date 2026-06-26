@@ -34,7 +34,7 @@ class AppointmentRepository {
           'date': date.toIso8601String().split('T')[0],
         },
       );
-      return List<String>.from(response.data as List);
+      return List<String>.from(response.data['available_slots'] as List);
     } catch (e) {
       throw Exception('Failed to load available slots: $e');
     }
@@ -54,6 +54,24 @@ class AppointmentRepository {
       await _apiService.post('/appointments/$id/cancel/');
     } catch (e) {
       throw Exception('Failed to cancel appointment: $e');
+    }
+  }
+
+  Future<AppointmentModel> completeAppointment(int id) async {
+    try {
+      final response = await _apiService.post('/appointments/$id/complete/');
+      return AppointmentModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to complete appointment: $e');
+    }
+  }
+
+  Future<AppointmentModel> confirmAppointment(int id) async {
+    try {
+      final response = await _apiService.post('/appointments/$id/confirm/');
+      return AppointmentModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to confirm appointment: $e');
     }
   }
 }

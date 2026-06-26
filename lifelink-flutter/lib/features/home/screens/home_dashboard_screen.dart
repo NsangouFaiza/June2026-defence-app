@@ -17,7 +17,24 @@ class HomeDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(localization.translate('home')),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              height: 36.h,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'LifeLink',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20.sp,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

@@ -107,7 +107,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         return {
             'id': message.id,
+            'conversation': conversation.id,
             'conversation_id': conversation.id,
+            'sender': self.user.id,
             'sender_id': self.user.id,
             'sender_name': self.user.full_name,
             'content': message.content,

@@ -10,6 +10,8 @@ class BloodRequestModel {
   final String status;
   final bool isEmergency;
   final String? reason;
+  final String paymentStatus;
+  final String? paymentReference;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -25,6 +27,8 @@ class BloodRequestModel {
     required this.status,
     required this.isEmergency,
     this.reason,
+    required this.paymentStatus,
+    this.paymentReference,
     required this.createdAt,
     this.updatedAt,
   });
@@ -42,6 +46,8 @@ class BloodRequestModel {
       status: json['status'] ?? 'PENDING',
       isEmergency: json['is_emergency'] ?? false,
       reason: json['reason'],
+      paymentStatus: json['payment_status'] ?? 'PENDING',
+      paymentReference: json['payment_reference'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
@@ -60,6 +66,8 @@ class BloodRequestModel {
       'status': status,
       'is_emergency': isEmergency,
       'reason': reason,
+      'payment_status': paymentStatus,
+      'payment_reference': paymentReference,
     };
   }
 }

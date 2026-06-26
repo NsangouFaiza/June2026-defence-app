@@ -84,3 +84,18 @@ class User(AbstractUser):
                 (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
             )
         return None
+
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        if instance.role == 'donor':
+            from donors.models import Donor
+            Donor.objects.get_or_create(user=instance)
+        elif instance.role == 'patient':
+            from patients.models import Patient
+            Patient.objects.get_or_create(user=instance)
+

@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/auth_repository.dart';
+import '../../../../core/utils/role_router.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -24,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final localization = ref.read(localizationServiceProvider);
     setState(() => _isLoading = true);
 
     try {
@@ -33,13 +35,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _passwordController.text,
       );
 
+      ref.invalidate(currentUserProvider);
+      final user = await ref.read(currentUserProvider.future);
+      if (user != null && mounted) {
+        await ref.read(localizationProvider.notifier).changeLanguage(user.language);
+      }
+
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
+        Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
         );
       }
     } finally {
@@ -80,28 +89,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   children: [
                     SizedBox(height: 20.h),
-                    // Healthcare illustration
+                    // Healthcare logo
                     Container(
                       width: 120.w,
                       height: 120.w,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white,
                         shape: BoxShape.circle,
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.local_hospital,
-                            size: 80.w,
-                            color: Colors.white.withOpacity(0.5),
-                          ),
-                          Icon(
-                            Icons.favorite,
-                            size: 50.w,
-                            color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
+                      ),
+                      child: ClipOval(
+                        child: Padding(
+                          padding: EdgeInsets.all(12.w),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                     SizedBox(height: 24.h),
@@ -116,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      'Connecting Donors. Saving Lives.',
+                      localization.translate('tagline'),
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: Colors.white.withOpacity(0.9),
@@ -144,27 +154,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       SizedBox(height: 8.h),
                       Text(
-                        'Sign in to continue',
+                        localization.translate('sign_in_to_continue'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppTheme.onSurfaceVariant,
                             ),
                         textAlign: TextAlign.center,
                       ),
+                      SizedBox(height: 24.h),
+                      DropdownButtonFormField<String>(
+                        value: localization.currentLanguage,
+                        decoration: const InputDecoration(
+                          labelText: 'Language / Langue',
+                          prefixIcon: Icon(Icons.language_outlined),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'en', child: Text('English 🇬🇧')),
+                          DropdownMenuItem(value: 'fr', child: Text('Français 🇫🇷')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            ref.read(localizationProvider.notifier).changeLanguage(value);
+                          }
+                        },
+                      ),
                       SizedBox(height: 32.h),
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          hintText: 'Enter your email',
+                        decoration: InputDecoration(
+                          labelText: localization.translate('email'),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          hintText: localization.translate('enter_email'),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
+                            return localization.translate('please_enter_email');
                           }
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                            return 'Please enter a valid email';
+                            return localization.translate('please_enter_valid_email');
                           }
                           return null;
                         },
@@ -175,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: localization.translate('password'),
                           prefixIcon: const Icon(Icons.lock_outlined),
-                          hintText: 'Enter your password',
+                          hintText: localization.translate('enter_password'),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -188,10 +215,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         obscureText: _obscurePassword,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
+                            return localization.translate('please_enter_password');
                           }
                           if (value.length < 8) {
-                            return 'Password must be at least 8 characters';
+                            return localization.translate('password_length_error');
                           }
                           return null;
                         },

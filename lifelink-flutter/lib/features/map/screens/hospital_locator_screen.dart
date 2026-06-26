@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
@@ -54,8 +56,35 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
     });
   }
 
+  Future<void> _checkPermissionAndGetLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(position.latitude, position.longitude),
+          12,
+        ),
+      );
+    } catch (_) {}
+  }
+
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    _checkPermissionAndGetLocation();
   }
 
   @override
@@ -138,9 +167,24 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
                                   title: Text(hospital.name),
                                   subtitle: Text(hospital.address ?? ''),
                                   trailing: IconButton(
-                                    icon: const Icon(Icons.directions),
-                                    onPressed: () {
-                                      // Open navigation
+                                    icon: const Icon(Icons.directions, color: AppTheme.primaryColor),
+                                    onPressed: () async {
+                                      if (hospital.latitude != null && hospital.longitude != null) {
+                                        final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${hospital.latitude},${hospital.longitude}');
+                                        try {
+                                          if (await canLaunchUrl(url)) {
+                                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                                          } else {
+                                            throw 'Could not launch maps';
+                                          }
+                                        } catch (_) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Could not launch directions URL')),
+                                            );
+                                          }
+                                        }
+                                      }
                                     },
                                   ),
                                   onTap: () {

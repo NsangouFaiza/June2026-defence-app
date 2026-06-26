@@ -106,13 +106,31 @@ class DonorDashboardScreen extends ConsumerWidget {
                                   color: Colors.white.withOpacity(0.9),
                                 ),
                               ),
-                              Text(
-                                'Donor Dashboard',
-                                style: TextStyle(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: EdgeInsets.all(4.w),
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      height: 24.w,
+                                      width: 24.w,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Donor Dashboard',
+                                    style: TextStyle(
+                                      fontSize: 20.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

@@ -23,9 +23,9 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        if not admin.has_usable_password():
-            admin.set_password('Admin@12345')
-            admin.save()
+        admin.set_password('Admin@12345')
+        admin.is_verified = True
+        admin.save()
 
         donor_user, _ = User.objects.get_or_create(
             email='donor@lifelink.com',
@@ -37,9 +37,9 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        if not donor_user.has_usable_password():
-            donor_user.set_password('Donor@12345')
-            donor_user.save()
+        donor_user.set_password('Donor@12345')
+        donor_user.is_verified = True
+        donor_user.save()
 
         patient_user, _ = User.objects.get_or_create(
             email='patient@lifelink.com',
@@ -51,9 +51,9 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        if not patient_user.has_usable_password():
-            patient_user.set_password('Patient@12345')
-            patient_user.save()
+        patient_user.set_password('Patient@12345')
+        patient_user.is_verified = True
+        patient_user.save()
 
         staff_user, _ = User.objects.get_or_create(
             email='staff@lifelink.com',
@@ -64,9 +64,9 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        if not staff_user.has_usable_password():
-            staff_user.set_password('Staff@12345')
-            staff_user.save()
+        staff_user.set_password('Staff@12345')
+        staff_user.is_verified = True
+        staff_user.save()
 
         lab_user, _ = User.objects.get_or_create(
             email='lab@lifelink.com',
@@ -77,9 +77,9 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        if not lab_user.has_usable_password():
-            lab_user.set_password('Lab@12345')
-            lab_user.save()
+        lab_user.set_password('Lab@12345')
+        lab_user.is_verified = True
+        lab_user.save()
 
         from hospitals.models import Hospital, HospitalStaff
         from blood_banks.models import BloodBank

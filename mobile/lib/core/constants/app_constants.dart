@@ -1,6 +1,15 @@
+import 'dart:io';
+
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl = 'http://localhost:8000/api';
+  static String get apiBaseUrl {
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2:8000/api';
+      }
+    } catch (_) {}
+    return 'http://localhost:8000/api';
+  }
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
 

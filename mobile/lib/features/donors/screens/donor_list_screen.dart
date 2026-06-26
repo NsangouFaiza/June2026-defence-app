@@ -131,11 +131,17 @@ class DonorListScreen extends ConsumerWidget {
                         trailing: IconButton(
                           icon: const Icon(Icons.contact_phone_outlined),
                           onPressed: () {
-                            // Contact donor
+                            Navigator.of(context).pushNamed(
+                              '/chat',
+                              arguments: {'otherUserId': donor.userId},
+                            );
                           },
                         ),
                         onTap: () {
-                          // View donor details
+                          Navigator.of(context).pushNamed(
+                            '/donor-details',
+                            arguments: donor.id,
+                          );
                         },
                       ),
                     );

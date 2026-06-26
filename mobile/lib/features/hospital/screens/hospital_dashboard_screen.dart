@@ -77,14 +77,18 @@ class HospitalDashboardScreen extends ConsumerWidget {
                           width: 56.w,
                           height: 56.w,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
-                          child: Icon(
-                            Icons.local_hospital,
-                            color: Colors.white,
-                            size: 28.w,
+                          child: ClipOval(
+                            child: Padding(
+                              padding: EdgeInsets.all(4.w),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                         ),
                         SizedBox(width: 16.w),

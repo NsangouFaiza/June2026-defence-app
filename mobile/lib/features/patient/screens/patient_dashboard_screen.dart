@@ -80,13 +80,31 @@ class PatientDashboardScreen extends ConsumerWidget {
                                   color: Colors.white.withOpacity(0.9),
                                 ),
                               ),
-                              Text(
-                                'Patient Dashboard',
-                                style: TextStyle(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: EdgeInsets.all(4.w),
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      height: 24.w,
+                                      width: 24.w,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Patient Dashboard',
+                                    style: TextStyle(
+                                      fontSize: 20.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -260,46 +278,49 @@ class PatientDashboardScreen extends ConsumerWidget {
                         ],
                       ),
                       SizedBox(height: 16.h),
-                      if (requests.isEmpty)
-                        Container(
-                          padding: EdgeInsets.symmetric(vertical: 48.h),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.inbox_outlined,
-                                  size: 64.w,
-                                  color: Colors.grey[400],
+                      requests.isEmpty
+                          ? Container(
+                              padding: EdgeInsets.symmetric(vertical: 48.h),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.inbox_outlined,
+                                      size: 64.w,
+                                      color: Colors.grey[400],
+                                    ),
+                                    SizedBox(height: 16.h),
+                                    Text(
+                                      'No requests yet',
+                                      style: TextStyle(
+                                        color: AppTheme.onSurfaceVariant,
+                                        fontSize: 16.sp,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 16.h),
-                                Text(
-                                  'No requests yet',
-                                  style: TextStyle(
-                                    color: AppTheme.onSurfaceVariant,
-                                    fontSize: 16.sp,
-                                  ),
-                                ),
-                              ],
+                              ),
+                            )
+                          : SizedBox(
+                              width: double.infinity,
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: requests.length > 3 ? 3 : requests.length,
+                                itemBuilder: (context, index) {
+                                  final request = requests[index];
+                                  return _buildRequestCard(context, request);
+                                },
+                              ),
                             ),
-                          ),
-                        )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: requests.length > 3 ? 3 : requests.length,
-                          itemBuilder: (context, index) {
-                            final request = requests[index];
-                            return _buildRequestCard(request);
-                          },
-                        ),
                     ],
                   ),
                 ),
               ),
               SliverToBoxAdapter(child: SizedBox(height: 100.h)),
             ],
-          ),
+          );
         },
       ),
       // Emergency Floating Button
@@ -420,7 +441,9 @@ class PatientDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRequestCard(BloodRequestModel request) {
+  Widget _buildRequestCard(BuildContext context, BloodRequestModel request) {
+    final showPayButton = request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PENDING';
+    
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
@@ -435,60 +458,119 @@ class PatientDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: BoxDecoration(
-              color: _getStatusColor(request.status).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(
-              _getStatusIcon(request.status),
-              color: _getStatusColor(request.status),
-              size: 24.w,
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${request.bloodGroup} • ${request.quantity} unit(s)',
+          Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  color: _getStatusColor(request.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  _getStatusIcon(request.status),
+                  color: _getStatusColor(request.status),
+                  size: 24.w,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${request.bloodGroup} • ${request.quantity} unit(s)',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      request.hospitalName ?? 'Unknown hospital',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(request.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  request.status.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.onSurface,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(request.status),
                   ),
                 ),
-                SizedBox(height: 4.h),
+              ),
+            ],
+          ),
+          if (showPayButton) ...[
+            const Divider(height: 24, thickness: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  request.hospitalName,
+                  'Payment: PENDING',
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: AppTheme.onSurfaceVariant,
+                    color: AppTheme.warning,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      '/payment',
+                      arguments: {
+                        'requestId': request.id,
+                        'amount': request.quantity * 15000.0,
+                      },
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: AppTheme.success,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  child: const Text('Pay Now'),
+                ),
+              ],
+            ),
+          ] else if (request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PAID') ...[
+            const Divider(height: 24, thickness: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const Icon(Icons.check_circle_outline, color: AppTheme.success, size: 16),
+                SizedBox(width: 4.w),
+                Text(
+                  'Payment: PAID (${request.paymentReference ?? ""})',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppTheme.success,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-            decoration: BoxDecoration(
-              color: _getStatusColor(request.status).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Text(
-              request.status.toUpperCase(),
-              style: TextStyle(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.bold,
-                color: _getStatusColor(request.status),
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );

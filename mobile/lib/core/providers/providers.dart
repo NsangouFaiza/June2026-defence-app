@@ -93,6 +93,6 @@ final localizationProvider = StateNotifierProvider<LocalizationService, Locale>(
 });
 
 final localizationServiceProvider = Provider<LocalizationService>((ref) {
-  ref.watch(localizationProvider);
-  return ref.read(localizationProvider.notifier);
+  final locale = ref.watch(localizationProvider);
+  return TranslatedLocalizationService(locale);
 });

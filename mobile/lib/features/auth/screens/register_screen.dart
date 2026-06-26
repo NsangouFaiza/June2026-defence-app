@@ -7,6 +7,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/role_router.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -52,6 +53,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
       firstDate: DateTime.now().subtract(const Duration(days: 365 * 100)),
       lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+      initialDatePickerMode: DatePickerMode.year,
     );
     if (picked != null) {
       setState(() => _selectedDateOfBirth = picked);
@@ -59,13 +61,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    final localization = ref.read(localizationServiceProvider);
     if (!_formKey.currentState!.validate()) return;
     if (_selectedGender == null ||
         _selectedBloodGroup == null ||
         _selectedDateOfBirth == null ||
         _selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        SnackBar(content: Text(localization.translate('please_fill_fields'))),
       );
       return;
     }
@@ -79,25 +82,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'email': _emailController.text.trim(),
         'phone_number': _phoneController.text.trim(),
         'password': _passwordController.text,
+        'password_confirm': _confirmPasswordController.text,
         'gender': _selectedGender,
-        'date_of_birth': _selectedDateOfBirth!.toIso8601String(),
+        'date_of_birth': "${_selectedDateOfBirth!.year.toString().padLeft(4, '0')}-${_selectedDateOfBirth!.month.toString().padLeft(2, '0')}-${_selectedDateOfBirth!.day.toString().padLeft(2, '0')}",
         'blood_group': _selectedBloodGroup,
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
         'region': _regionController.text.trim(),
         'role': _selectedRole,
+        'language': localization.currentLanguage,
       });
+
+      ref.invalidate(currentUserProvider);
+      final user = await ref.read(currentUserProvider.future);
+
+      if (user != null && mounted) {
+        await ref.read(localizationProvider.notifier).changeLanguage(user.language);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful! Please login.')),
+          SnackBar(content: Text(localization.translate('registration_success'))),
         );
-        Navigator.of(context).pop();
+        final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
+        Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
         );
       }
     } finally {
@@ -113,70 +126,153 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(localization.translate('register')),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: AppTheme.onSurface,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
-                Text(
-                  'Create Account',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.onSurface,
+                // Header with illustration (brand consistent)
+                Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppTheme.primaryColor,
+                            AppTheme.secondaryColor,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(40.r),
+                          bottomRight: Radius.circular(40.r),
+                        ),
                       ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Select your role to get started',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onSurfaceVariant,
+                      child: Column(
+                        children: [
+                          SizedBox(height: 20.h),
+                          // Healthcare logo
+                          Container(
+                            width: 120.w,
+                            height: 120.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Padding(
+                                padding: EdgeInsets.all(12.w),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 24.h),
+                          Text(
+                            'LifeLink',
+                            style: TextStyle(
+                              fontSize: 36.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            localization.translate('tagline'),
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
                       ),
-                  textAlign: TextAlign.center,
+                    ),
+                    Positioned(
+                      top: 16.h,
+                      left: 16.w,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 24.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header
+                      Text(
+                        localization.translate('create_account'),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.onSurface,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        localization.translate('select_role_subtitle'),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 24.h),
                 
                 // Role Selection Cards
                 Column(
                   children: [
                     _buildRoleCard(
                       icon: Icons.person,
-                      title: 'Patient',
-                      description: 'Request blood and find donors',
+                      title: localization.translate('role_patient_title'),
+                      description: localization.translate('role_patient_desc'),
                       value: 'patient',
                       color: AppTheme.primaryColor,
                     ),
                     SizedBox(height: 12.h),
                     _buildRoleCard(
                       icon: Icons.volunteer_activism,
-                      title: 'Donor',
-                      description: 'Donate blood and save lives',
+                      title: localization.translate('role_donor_title'),
+                      description: localization.translate('role_donor_desc'),
                       value: 'donor',
                       color: AppTheme.success,
                     ),
                     SizedBox(height: 12.h),
                     _buildRoleCard(
                       icon: Icons.local_hospital,
-                      title: 'Hospital Staff',
-                      description: 'Manage inventory and requests',
+                      title: localization.translate('role_hospital_title'),
+                      description: localization.translate('role_hospital_desc'),
                       value: 'hospital_staff',
                       color: AppTheme.accentColor,
                     ),
                     SizedBox(height: 12.h),
                     _buildRoleCard(
                       icon: Icons.admin_panel_settings,
-                      title: 'Administrator',
-                      description: 'Manage system and users',
+                      title: localization.translate('role_admin_title'),
+                      description: localization.translate('role_admin_desc'),
                       value: 'system_admin',
                       color: Colors.purple,
                     ),
@@ -184,20 +280,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 SizedBox(height: 24.h),
                 
+                DropdownButtonFormField<String>(
+                  value: localization.currentLanguage,
+                  decoration: const InputDecoration(
+                    labelText: 'Language / Langue',
+                    prefixIcon: Icon(Icons.language_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'en', child: Text('English 🇬🇧')),
+                    DropdownMenuItem(value: 'fr', child: Text('Français 🇫🇷')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      ref.read(localizationProvider.notifier).changeLanguage(value);
+                    }
+                  },
+                ),
+                SizedBox(height: 24.h),
+                
                 // Personal Information Section
-                _buildSectionHeader('Personal Information'),
+                _buildSectionHeader(localization.translate('personal_information')),
                 SizedBox(height: 16.h),
                 
                 TextFormField(
                   controller: _fullNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outlined),
-                    hintText: 'Enter your full name',
+                  decoration: InputDecoration(
+                    labelText: localization.translate('full_name'),
+                    prefixIcon: const Icon(Icons.person_outlined),
+                    hintText: localization.translate('enter_full_name'),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your full name';
+                      return localization.translate('please_enter_full_name');
                     }
                     return null;
                   },
@@ -207,16 +321,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Gender',
-                          prefixIcon: Icon(Icons.person_outlined),
+                        decoration: InputDecoration(
+                          labelText: localization.translate('gender'),
+                          prefixIcon: const Icon(Icons.person_outlined),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'M', child: Text('Male')),
-                          DropdownMenuItem(value: 'F', child: Text('Female')),
+                        items: [
+                          DropdownMenuItem(value: 'M', child: Text(localization.translate('male'))),
+                          DropdownMenuItem(value: 'F', child: Text(localization.translate('female'))),
                         ],
                         onChanged: (value) => setState(() => _selectedGender = value),
-                        validator: (value) => value == null ? 'Please select gender' : null,
+                        validator: (value) => value == null ? localization.translate('please_select_gender') : null,
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -224,13 +338,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: InkWell(
                         onTap: _selectDateOfBirth,
                         child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Date of Birth',
-                            prefixIcon: Icon(Icons.cake_outlined),
+                          decoration: InputDecoration(
+                            labelText: localization.translate('date_of_birth'),
+                            prefixIcon: const Icon(Icons.cake_outlined),
                           ),
                           child: Text(
                             _selectedDateOfBirth == null
-                                ? 'Select DOB'
+                                ? localization.translate('select_dob')
                                 : '${_selectedDateOfBirth!.day}/${_selectedDateOfBirth!.month}/${_selectedDateOfBirth!.year}',
                           ),
                         ),
@@ -240,33 +354,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 SizedBox(height: 12.h),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Blood Group',
-                    prefixIcon: Icon(Icons.bloodtype_outlined),
+                  decoration: InputDecoration(
+                    labelText: localization.translate('blood_group'),
+                    prefixIcon: const Icon(Icons.bloodtype_outlined),
                   ),
                   items: AppConstants.bloodGroups
                       .map((bg) => DropdownMenuItem(value: bg, child: Text(bg)))
                       .toList(),
                   onChanged: (value) => setState(() => _selectedBloodGroup = value),
-                  validator: (value) => value == null ? 'Please select blood group' : null,
+                  validator: (value) => value == null ? localization.translate('please_select_blood_group') : null,
                 ),
                 SizedBox(height: 24.h),
                 
                 // Contact Information Section
-                _buildSectionHeader('Contact Information'),
+                _buildSectionHeader(localization.translate('contact_information')),
                 SizedBox(height: 16.h),
                 
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                    hintText: 'Enter your phone number',
+                  decoration: InputDecoration(
+                    labelText: localization.translate('phone_number'),
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    hintText: localization.translate('enter_phone'),
                   ),
                   keyboardType: TextInputType.phone,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
+                      return localization.translate('please_enter_phone');
                     }
                     return null;
                   },
@@ -274,18 +388,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 SizedBox(height: 12.h),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    hintText: 'Enter your email',
+                  decoration: InputDecoration(
+                    labelText: localization.translate('email'),
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    hintText: localization.translate('enter_email'),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return localization.translate('please_enter_email');
                     }
                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return localization.translate('please_enter_valid_email');
                     }
                     return null;
                   },
@@ -293,14 +407,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 SizedBox(height: 12.h),
                 TextFormField(
                   controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                    hintText: 'Enter your address',
+                  decoration: InputDecoration(
+                    labelText: localization.translate('address'),
+                    prefixIcon: const Icon(Icons.location_on_outlined),
+                    hintText: localization.translate('enter_address'),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your address';
+                      return localization.translate('please_enter_address');
                     }
                     return null;
                   },
@@ -311,13 +425,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _cityController,
-                        decoration: const InputDecoration(
-                          labelText: 'City',
-                          prefixIcon: Icon(Icons.location_city_outlined),
+                        decoration: InputDecoration(
+                          labelText: localization.translate('city'),
+                          prefixIcon: const Icon(Icons.location_city_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Required';
+                            return localization.translate('required');
                           }
                           return null;
                         },
@@ -327,13 +441,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _regionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Region',
-                          prefixIcon: Icon(Icons.map_outlined),
+                        decoration: InputDecoration(
+                          labelText: localization.translate('region'),
+                          prefixIcon: const Icon(Icons.map_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Required';
+                            return localization.translate('required');
                           }
                           return null;
                         },
@@ -344,7 +458,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 SizedBox(height: 24.h),
                 
                 // Password Section
-                _buildSectionHeader('Security'),
+                _buildSectionHeader(localization.translate('security')),
                 SizedBox(height: 16.h),
                 
                 TextFormField(
@@ -352,7 +466,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   decoration: InputDecoration(
                     labelText: localization.translate('password'),
                     prefixIcon: const Icon(Icons.lock_outlined),
-                    hintText: 'Create a password',
+                    hintText: localization.translate('create_password'),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -365,10 +479,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscurePassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
+                      return localization.translate('please_enter_password');
                     }
                     if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
+                      return localization.translate('password_length_error');
                     }
                     return null;
                   },
@@ -379,7 +493,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   decoration: InputDecoration(
                     labelText: localization.translate('confirm_password'),
                     prefixIcon: const Icon(Icons.lock_outlined),
-                    hintText: 'Confirm your password',
+                    hintText: localization.translate('confirm_your_password'),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
@@ -392,7 +506,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscureConfirmPassword,
                   validator: (value) {
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return localization.translate('passwords_do_not_match');
                     }
                     return null;
                   },
@@ -429,6 +543,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Text(localization.translate('login')),
                     ),
                   ],
+                ),
+                    ],
+                  ),
                 ),
               ],
             ),

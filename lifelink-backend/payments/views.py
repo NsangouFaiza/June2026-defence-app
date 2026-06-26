@@ -31,6 +31,10 @@ class PaymentActionViewSet(viewsets.ViewSet):
         request_id = request.data.get('request_id')
         amount = request.data.get('amount')
         payment_method = request.data.get('payment_method')
+        if payment_method == 'MTN':
+            payment_method = 'MTN_MOMO'
+        elif payment_method == 'ORANGE':
+            payment_method = 'ORANGE_MONEY'
         phone_number = request.data.get('phone_number')
 
         if not all([request_id, amount, payment_method, phone_number]):

@@ -14,6 +14,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'full_name': self.user.full_name,
             'role': self.user.role,
             'blood_group': self.user.blood_group,
+            'language': self.user.language,
         }
         return data
 
@@ -43,7 +44,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'full_name', 'email', 'phone_number', 'password', 'password_confirm',
-            'gender', 'date_of_birth', 'blood_group', 'address', 'city', 'region', 'role',
+            'gender', 'date_of_birth', 'blood_group', 'address', 'city', 'region', 'role', 'language',
         ]
 
     def validate(self, attrs):

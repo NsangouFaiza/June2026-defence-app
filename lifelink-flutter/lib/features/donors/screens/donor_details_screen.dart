@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/models/donor_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DonorDetailsScreen extends ConsumerWidget {
   final int donorId;
@@ -154,7 +155,10 @@ class DonorDetailsScreen extends ConsumerWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Open chat
+                          Navigator.of(context).pushNamed(
+                            '/chat',
+                            arguments: {'otherUserId': donor.userId},
+                          );
                         },
                         icon: const Icon(Icons.chat_outlined),
                         label: Text(localization.translate('chat')),
@@ -163,8 +167,21 @@ class DonorDetailsScreen extends ConsumerWidget {
                     SizedBox(width: 16.w),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          // Make phone call
+                        onPressed: () async {
+                          final url = Uri.parse('tel:${donor.phoneNumber}');
+                          try {
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            } else {
+                              throw 'Could not launch dialer';
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Calling ${donor.fullName} at ${donor.phoneNumber}...')),
+                              );
+                            }
+                          }
                         },
                         icon: const Icon(Icons.phone_outlined),
                         label: Text(localization.translate('call')),

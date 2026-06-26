@@ -87,8 +87,8 @@ class _AppointmentBookingScreenState extends ConsumerState<AppointmentBookingScr
       final appointmentRepo = ref.read(appointmentRepositoryProvider);
       await appointmentRepo.bookAppointment({
         'hospital': _selectedHospitalId,
-        'date': _selectedDate!.toIso8601String(),
-        'time': _selectedTime!.format(context),
+        'date': _selectedDate!.toIso8601String().split('T')[0],
+        'time': '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
         'notes': _notes,
       });
 

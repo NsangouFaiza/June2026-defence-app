@@ -18,6 +18,28 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Conversation.objects.filter(participants=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        other_user_id = request.data.get('other_user_id') or request.query_params.get('other_user_id')
+        if other_user_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                other_user = User.objects.get(pk=other_user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'Other user does not exist'}, status=status.HTTP_404_NOT_FOUND)
+                
+            existing = Conversation.objects.filter(participants=request.user).filter(participants=other_user).first()
+            if existing:
+                serializer = self.get_serializer(existing)
+                return Response(serializer.data)
+                
+            conversation = Conversation.objects.create()
+            conversation.participants.add(request.user, other_user)
+            serializer = self.get_serializer(conversation)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        return super().create(request, *args, **kwargs)
+
     @action(detail=False, methods=['get'])
     def list_conversations(self, request):
         """List current user's conversations."""
@@ -25,27 +47,40 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(conversations, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
-    def send_message(self, request, pk=None):
-        """Send a message in a conversation."""
+    @action(detail=True, methods=['get', 'post'])
+    def messages(self, request, pk=None):
+        """Get or send messages inside a specific conversation."""
         conversation = self.get_object()
-        content = request.data.get('content')
-        attachment = request.data.get('attachment')
-
-        if not content:
-            return Response(
-                {'error': 'content is required'},
-                status=status.HTTP_400_BAD_REQUEST,
+        if request.method == 'POST':
+            content = request.data.get('content')
+            attachment = request.data.get('attachment')
+            if not content:
+                return Response({'error': 'content is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                content=content,
+                attachment=attachment,
             )
+            conversation.save()
+            serializer = MessageSerializer(message)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        # GET method
+        messages = conversation.messages.all().order_by('created_at')
+        serializer = MessageSerializer(messages, many=True)
+        return Response(serializer.data)
 
-        message = Message.objects.create(
-            conversation=conversation,
-            sender=request.user,
-            content=content,
-            attachment=attachment,
-        )
-        serializer = MessageSerializer(message)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @action(detail=True, methods=['post'], url_path='mark-read')
+    def mark_read(self, request, pk=None):
+        """Mark incoming messages in the conversation as read."""
+        conversation = self.get_object()
+        from django.utils import timezone
+        unread = conversation.messages.filter(is_read=False).exclude(sender=request.user)
+        count = unread.count()
+        unread.update(is_read=True, read_at=timezone.now())
+        return Response({'status': 'messages marked as read', 'count': count})
 
 
 class MessageViewSet(viewsets.ModelViewSet):

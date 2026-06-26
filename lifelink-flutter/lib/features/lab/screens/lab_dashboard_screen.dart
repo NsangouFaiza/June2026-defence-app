@@ -11,21 +11,144 @@ import '../../../../data/models/appointment_model.dart';
 import '../../../../data/models/donation_model.dart';
 import '../../../../data/models/blood_inventory_model.dart';
 
-class LabDashboardScreen extends ConsumerWidget {
+class LabDashboardScreen extends ConsumerStatefulWidget {
   const LabDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final localization = ref.watch(localizationServiceProvider);
-    final appointmentRepo = ref.watch(appointmentRepositoryProvider);
-    final donationRepo = ref.watch(donationRepositoryProvider);
-    final inventoryRepo = ref.watch(inventoryRepositoryProvider);
+  ConsumerState<LabDashboardScreen> createState() => _LabDashboardScreenState();
+}
 
+class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
+  late Future<List<AppointmentModel>> _appointmentsFuture;
+  late Future<List<DonationModel>> _donationsFuture;
+  late Future<List<BloodInventoryModel>> _screeningFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshAll();
+  }
+
+  void _refreshAll() {
+    setState(() {
+      _appointmentsFuture = ref.read(appointmentRepositoryProvider).getAppointments();
+      _donationsFuture = ref.read(donationRepositoryProvider).getDonationHistory();
+      _screeningFuture = ref.read(inventoryRepositoryProvider).getInventory();
+    });
+  }
+
+  void _showRecordDonationDialog(BuildContext context) {
+    final donorController = TextEditingController();
+    final hospitalController = TextEditingController();
+    final quantityController = TextEditingController(text: '450');
+    final notesController = TextEditingController();
+    String selectedBloodGroup = 'O+';
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Record Donation'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: donorController,
+                    decoration: const InputDecoration(labelText: 'Donor ID'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  ),
+                  TextFormField(
+                    controller: hospitalController,
+                    decoration: const InputDecoration(labelText: 'Hospital ID'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedBloodGroup,
+                    decoration: const InputDecoration(labelText: 'Blood Group'),
+                    items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+                        .map((bg) => DropdownMenuItem(value: bg, child: Text(bg)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) selectedBloodGroup = val;
+                    },
+                  ),
+                  TextFormField(
+                    controller: quantityController,
+                    decoration: const InputDecoration(labelText: 'Quantity (ml)'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  ),
+                  TextFormField(
+                    controller: notesController,
+                    decoration: const InputDecoration(labelText: 'Notes / Screening Notes'),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  try {
+                    final data = {
+                      'donor': int.parse(donorController.text),
+                      'hospital': int.parse(hospitalController.text),
+                      'blood_group': selectedBloodGroup,
+                      'units': int.parse(quantityController.text),
+                      'notes': notesController.text,
+                      'status': 'COMPLETED',
+                    };
+                    await ref.read(donationRepositoryProvider).recordDonation(data);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Donation recorded successfully')),
+                    );
+                    _refreshAll();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error recording donation: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Record'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Lab Technician Dashboard'),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/logo.png',
+                height: 32.h,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(width: 8.w),
+              const Text('Lab Technician Dashboard'),
+            ],
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Appointments', icon: Icon(Icons.event)),
@@ -36,23 +159,29 @@ class LabDashboardScreen extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            _AppointmentsTab(future: appointmentRepo.getAppointments()),
-            _DonationsTab(future: donationRepo.getDonationHistory()),
-            _ScreeningTab(future: inventoryRepo.getInventory()),
+            _AppointmentsTab(future: _appointmentsFuture, onRefresh: _refreshAll),
+            _DonationsTab(future: _donationsFuture),
+            _ScreeningTab(future: _screeningFuture, onRefresh: _refreshAll),
           ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showRecordDonationDialog(context),
+          label: const Text('Record Donation'),
+          icon: const Icon(Icons.add),
         ),
       ),
     );
   }
 }
 
-class _AppointmentsTab extends StatelessWidget {
-  const _AppointmentsTab({required this.future});
+class _AppointmentsTab extends ConsumerWidget {
+  const _AppointmentsTab({required this.future, required this.onRefresh});
 
   final Future<List<AppointmentModel>> future;
+  final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FutureBuilder<List<AppointmentModel>>(
       future: future,
       builder: (context, snapshot) {
@@ -63,24 +192,39 @@ class _AppointmentsTab extends StatelessWidget {
         if (items.isEmpty) {
           return const Center(child: Text('No pending appointments'));
         }
-        return ListView.builder(
-          padding: EdgeInsets.all(16.w),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Card(
-              child: ListTile(
-                leading: Icon(Icons.person, color: AppTheme.primaryColor),
-                title: Text('Appointment #${item.id}'),
-                subtitle: Text('${item.date} • ${item.status}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.check_circle_outline),
-                  onPressed: () {},
-                  tooltip: 'Validate attendance',
+        return RefreshIndicator(
+          onRefresh: () async => onRefresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16.w),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: ListTile(
+                  leading: Icon(Icons.person, color: AppTheme.primaryColor),
+                  title: Text('Appointment #${item.id}'),
+                  subtitle: Text('${item.date} • ${item.status}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.check_circle_outline),
+                    onPressed: () async {
+                      try {
+                        await ref.read(appointmentRepositoryProvider).completeAppointment(item.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Appointment marked complete')),
+                        );
+                        onRefresh();
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
+                    tooltip: 'Validate attendance',
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -123,13 +267,14 @@ class _DonationsTab extends StatelessWidget {
   }
 }
 
-class _ScreeningTab extends StatelessWidget {
-  const _ScreeningTab({required this.future});
+class _ScreeningTab extends ConsumerWidget {
+  const _ScreeningTab({required this.future, required this.onRefresh});
 
   final Future<List<BloodInventoryModel>> future;
+  final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FutureBuilder<List<BloodInventoryModel>>(
       future: future,
       builder: (context, snapshot) {
@@ -140,33 +285,60 @@ class _ScreeningTab extends StatelessWidget {
         if (items.isEmpty) {
           return const Center(child: Text('No units pending screening'));
         }
-        return ListView.builder(
-          padding: EdgeInsets.all(16.w),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Card(
-              child: ListTile(
-                title: Text('${item.bloodGroup} • Qty ${item.quantity}'),
-                subtitle: Text('Status: ${item.status}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: () {},
-                      tooltip: 'Approve unit',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () {},
-                      tooltip: 'Reject unit',
-                    ),
-                  ],
+        return RefreshIndicator(
+          onRefresh: () async => onRefresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16.w),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: ListTile(
+                  title: Text('${item.bloodGroup} • Qty ${item.quantity}'),
+                  subtitle: Text('Status: ${item.status}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check, color: Colors.green),
+                        onPressed: () async {
+                          try {
+                            await ref.read(inventoryRepositoryProvider).approveUnit(item.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Blood unit approved')),
+                            );
+                            onRefresh();
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        tooltip: 'Approve unit',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () async {
+                          try {
+                            await ref.read(inventoryRepositoryProvider).rejectUnit(item.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Blood unit rejected')),
+                            );
+                            onRefresh();
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        tooltip: 'Reject unit',
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );

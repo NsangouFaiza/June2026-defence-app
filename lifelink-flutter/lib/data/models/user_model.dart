@@ -54,9 +54,11 @@ class UserModel {
       notificationPreferences: json['notification_preferences'],
       emailNotifications: json['email_notifications'],
       language: json['language'] ?? 'en',
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
+      createdAt: json['date_joined'] != null
+          ? DateTime.parse(json['date_joined'])
+          : json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : null,
     );
   }
 

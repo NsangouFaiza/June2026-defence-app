@@ -143,9 +143,77 @@ flutter build appbundle --release
 flutter build ios --release
 ```
 
-## Next Steps
+## iOS Physical Device Deployment (Running on iPhone)
 
-1. Set up the backend server (see `lifelink-backend/README.md`)
-2. Configure environment variables
-3. Test all features
-4. Deploy to app stores
+Since building iOS apps requires Xcode and Apple SDKs, compilation must be completed on a macOS environment. Follow these steps to build and run the application on your physical iPhone.
+
+### Prerequisites
+1. A Mac computer with **macOS** and the latest version of **Xcode** installed.
+2. An **Apple ID** (free or paid Apple Developer account).
+3. A physical **iPhone** and a USB connection cable.
+4. **CocoaPods** installed on the Mac (`sudo gem install cocoapods` or via Homebrew).
+
+### Steps to Run on a Physical iPhone
+
+1. **Clone and Open the Project on Mac**
+   Clone the repository to your Mac and navigate into the `lifelink-flutter` folder.
+   ```bash
+   flutter pub get
+   ```
+
+2. **Install Native Dependencies**
+   Navigate to the `ios` directory and run `pod install` to download CocoaPods dependencies:
+   ```bash
+   cd ios
+   pod install --repo-update
+   cd ..
+   ```
+
+3. **Open Xcode Workspace**
+   Open the iOS project in Xcode. Always open the `.xcworkspace` file (not the `.xcodeproj` file):
+   ```bash
+   open ios/Runner.xcworkspace
+   ```
+
+4. **Configure Apple Signing**
+   - In the left sidebar of Xcode, select the root **Runner** project.
+   - Select the **Runner** target in the targets list.
+   - Go to the **Signing & Capabilities** tab.
+   - Check **Automatically manage signing**.
+   - Under **Team**, select your Apple account (if not listed, add your Apple ID in *Xcode > Settings > Accounts*).
+   - Update the **Bundle Identifier** to a unique value if you get a wildcard error (e.g., `com.yourname.lifelink`).
+
+5. **Trust Developer Certificate on iPhone**
+   - Connect your iPhone to your Mac via USB. Select **Trust This Computer** on your iPhone screen.
+   - In Xcode's target device menu (top bar), select your physical **iPhone**.
+   - Click the **Run** button (Play icon) or run `flutter run` in your terminal.
+   - *Note*: If this is your first time deploying, it will fail and prompt you to trust the profile. On your iPhone, go to **Settings > General > VPN & Device Management**, tap your developer certificate (your Apple ID email), and tap **Trust**.
+   - Press the Run button in Xcode again, and the app will open on your iPhone.
+
+---
+
+## Troubleshooting: Why the iOS Build Takes Too Long
+
+If the iOS build seems stuck or takes an unusually long time, it is typically due to one of the following reasons:
+
+### 1. Large Native SDK Downloads (Google Maps & Firebase)
+LifeLink includes native libraries for Google Maps and Firebase. 
+- The iOS Google Maps SDK framework is **150MB+** in size.
+- During the first execution of `pod install` or `flutter run`, CocoaPods must download these large binary dependencies from Google's servers.
+- **Fix**: Wait for the download to finish. It will only take long on the first build, as subsequent builds will use the cached framework files.
+
+### 2. Slow CocoaPods Repo Updates
+By default, CocoaPods updates its entire local spec repository on builds. This cloning process can take 10-20 minutes depending on connection speeds.
+- **Fix**: Skip repository updates on daily builds by appending the `--no-repo-update` flag:
+  ```bash
+  cd ios
+  pod install --no-repo-update
+  ```
+
+### 3. Apple Silicon (M1/M2/M3) Translation Overhead
+If building on an Apple Silicon Mac without native CocoaPods setup, translations can slow compile times.
+- **Fix**: Run `pod install` using the native x86_64 arch wrapper:
+  ```bash
+  arch -x86_64 pod install
+  ```
+

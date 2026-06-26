@@ -22,6 +22,12 @@ class AuthRepository {
       await prefs.setString('refresh_token', refreshToken);
       await prefs.setBool('is_logged_in', true);
       await prefs.setBool('has_seen_onboarding', true);
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      if (responseData is Map && responseData.containsKey('detail')) {
+        throw Exception(responseData['detail']);
+      }
+      throw Exception(e.message ?? 'Unknown login error');
     } catch (e) {
       throw Exception('Login failed: ${e.toString()}');
     }
@@ -29,7 +35,30 @@ class AuthRepository {
 
   Future<void> register(Map<String, dynamic> data) async {
     try {
-      await _apiService.post('/users/register/', data);
+      final response = await _apiService.post('/users/register/', data);
+      
+      final token = response.data['access'];
+      final refreshToken = response.data['refresh'];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', token);
+      await prefs.setString('refresh_token', refreshToken);
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setBool('has_seen_onboarding', true);
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      if (responseData is Map) {
+        final errors = <String>[];
+        responseData.forEach((key, value) {
+          if (value is List) {
+            errors.add('$key: ${value.join(", ")}');
+          } else {
+            errors.add('$key: $value');
+          }
+        });
+        throw Exception(errors.join('\n'));
+      }
+      throw Exception(e.message ?? 'Unknown registration error');
     } catch (e) {
       throw Exception('Registration failed: ${e.toString()}');
     }
@@ -78,7 +107,7 @@ class AuthRepository {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     try {
-      await _apiService.patch('/users/me/', data);
+      await _apiService.patch('/users/update-profile/', data);
     } catch (e) {
       throw Exception('Failed to update profile: ${e.toString()}');
     }

@@ -61,4 +61,22 @@ class InventoryRepository {
       throw Exception('Failed to delete inventory item: $e');
     }
   }
+
+  Future<BloodInventoryModel> approveUnit(int id) async {
+    try {
+      final response = await _apiService.post('/inventory/$id/approve_unit/');
+      return BloodInventoryModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to approve unit: $e');
+    }
+  }
+
+  Future<BloodInventoryModel> rejectUnit(int id) async {
+    try {
+      final response = await _apiService.post('/inventory/$id/reject_unit/');
+      return BloodInventoryModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to reject unit: $e');
+    }
+  }
 }
