@@ -6,6 +6,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/request_repository.dart';
 import '../../../../data/models/blood_request_model.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
+import '../../../../data/models/blood_inventory_model.dart';
+import '../../../../data/models/hospital_model.dart';
+import '../../../../data/models/donor_model.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
@@ -14,11 +18,18 @@ class PatientDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final localization = ref.watch(localizationServiceProvider);
     final requestRepo = ref.watch(requestRepositoryProvider);
+    final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.value;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: FutureBuilder<List<BloodRequestModel>>(
-        future: requestRepo.getMyRequests(),
+      body: FutureBuilder<List<dynamic>>(
+        future: Future.wait([
+          requestRepo.getMyRequests().catchError((_) => <BloodRequestModel>[]),
+          ref.watch(inventoryRepositoryProvider).getInventory().catchError((_) => <BloodInventoryModel>[]),
+          ref.watch(hospitalRepositoryProvider).getHospitals().catchError((_) => <HospitalModel>[]),
+          ref.watch(donorRepositoryProvider).getDonors().catchError((_) => <DonorModel>[]),
+        ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -27,7 +38,15 @@ class PatientDashboardScreen extends ConsumerWidget {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final requests = snapshot.data ?? [];
+          final results = snapshot.data ?? [[], [], [], []];
+          final requests = results[0] as List<BloodRequestModel>;
+          final inventory = results[1] as List<BloodInventoryModel>;
+          final hospitals = results[2] as List<HospitalModel>;
+          final donors = results[3] as List<DonorModel>;
+
+          final totalBloodPacks = inventory.fold<int>(0, (sum, item) => sum + item.quantity);
+          final nearbyHospitals = hospitals.length;
+          final activeDonors = donors.length;
 
           return CustomScrollView(
             slivers: [
@@ -54,18 +73,21 @@ class PatientDashboardScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         // Profile Avatar
-                        Container(
-                          width: 56.w,
-                          height: 56.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 28.w,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/profile'),
+                          child: Container(
+                            width: 56.w,
+                            height: 56.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 28.w,
+                            ),
                           ),
                         ),
                         SizedBox(width: 16.w),
@@ -74,11 +96,12 @@ class PatientDashboardScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Welcome Back',
+                                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Row(
                                 children: [
@@ -96,12 +119,15 @@ class PatientDashboardScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
-                                  Text(
-                                    'Patient Dashboard',
-                                    style: TextStyle(
-                                      fontSize: 20.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  Expanded(
+                                    child: Text(
+                                      'Patient Dashboard',
+                                      style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -167,29 +193,32 @@ class PatientDashboardScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              '156',
+                              totalBloodPacks.toString(),
                               'Available Blood Packs',
                               Icons.bloodtype,
                               AppTheme.primaryColor,
+                              onTap: () => Navigator.of(context).pushNamed('/available-blood-packs'),
                             ),
                           ),
                           SizedBox(width: 12.w),
                           Expanded(
                             child: _buildStatCard(
-                              '24',
+                              nearbyHospitals.toString(),
                               'Nearby Hospitals',
                               Icons.local_hospital,
                               AppTheme.accentColor,
+                              onTap: () => Navigator.of(context).pushNamed('/hospital-locator'),
                             ),
                           ),
                         ],
                       ),
                       SizedBox(height: 12.h),
                       _buildStatCard(
-                        '892',
+                        activeDonors.toString(),
                         'Active Donors',
                         Icons.people,
                         AppTheme.success,
+                        onTap: () => Navigator.of(context).pushNamed('/donor-list'),
                       ),
                     ],
                   ),
@@ -237,13 +266,25 @@ class PatientDashboardScreen extends ConsumerWidget {
                             'Contact Donors',
                             Icons.people,
                             AppTheme.success,
-                            () => Navigator.of(context).pushNamed('/donor-directory'),
+                            () => Navigator.of(context).pushNamed('/donor-list'),
                           ),
                           _buildActionCard(
                             'My Requests',
                             Icons.assignment,
                             AppTheme.warning,
-                            () {},
+                            () => Navigator.of(context).pushNamed('/blood-requests'),
+                          ),
+                          _buildActionCard(
+                            'Chats',
+                            Icons.chat_bubble_outline_rounded,
+                            Colors.purple,
+                            () => Navigator.of(context).pushNamed('/chat-list'),
+                          ),
+                          _buildActionCard(
+                            'Appointments',
+                            Icons.calendar_month_outlined,
+                            Colors.teal,
+                            () => Navigator.of(context).pushNamed('/appointment-history'),
                           ),
                         ],
                       ),
@@ -334,60 +375,72 @@ class PatientDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(
+   Widget _buildStatCard(
     String value,
     String label,
     IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(icon, color: color, size: 24.w),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurface,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
+                child: Icon(icon, color: color, size: 24.w),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

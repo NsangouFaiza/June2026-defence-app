@@ -6,47 +6,153 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/hospital_repository.dart';
 import '../../../../data/models/hospital_model.dart';
+import '../../../../data/repositories/auth_repository.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 
-class HospitalDashboardScreen extends ConsumerWidget {
+class HospitalDashboardScreen extends ConsumerStatefulWidget {
   const HospitalDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HospitalDashboardScreen> createState() => _HospitalDashboardScreenState();
+}
+
+class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScreen> {
+  HospitalModel? _hospital;
+  bool _isInitialized = false;
+  late Future<HospitalModel?> _hospitalFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
+  }
+
+  void _showEditHospitalDialog(BuildContext context, HospitalModel currentHospital) {
+    final nameController = TextEditingController(text: currentHospital.name);
+    final descriptionController = TextEditingController(text: currentHospital.description);
+    final addressController = TextEditingController(text: currentHospital.address);
+    final cityController = TextEditingController(text: currentHospital.city);
+    final regionController = TextEditingController(text: currentHospital.region);
+    final phoneController = TextEditingController(text: currentHospital.phoneNumber);
+    final emailController = TextEditingController(text: currentHospital.email);
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Hospital Details'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Hospital Name'),
+                    validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  ),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 2,
+                  ),
+                  TextFormField(
+                    controller: addressController,
+                    decoration: const InputDecoration(labelText: 'Address'),
+                  ),
+                  TextFormField(
+                    controller: cityController,
+                    decoration: const InputDecoration(labelText: 'City'),
+                  ),
+                  TextFormField(
+                    controller: regionController,
+                    decoration: const InputDecoration(labelText: 'Region'),
+                  ),
+                  TextFormField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(labelText: 'Phone Number'),
+                  ),
+                  TextFormField(
+                    controller: emailController,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  setState(() {
+                    _hospital = HospitalModel(
+                      id: currentHospital.id,
+                      name: nameController.text,
+                      description: descriptionController.text,
+                      address: addressController.text,
+                      city: cityController.text,
+                      region: regionController.text,
+                      phoneNumber: phoneController.text,
+                      email: emailController.text,
+                      isActive: currentHospital.isActive,
+                      createdAt: currentHospital.createdAt,
+                    );
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Hospital details updated successfully')),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final localization = ref.watch(localizationServiceProvider);
-    final hospitalRepo = ref.watch(hospitalRepositoryProvider);
+    final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.value;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: FutureBuilder<HospitalModel?>(
-        future: hospitalRepo.getMyHospital(),
+        future: _hospitalFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && !_isInitialized) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
+          if (snapshot.hasError && !_isInitialized) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final hospital = snapshot.data;
-          if (hospital == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.local_hospital_outlined,
-                    size: 64.w,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    localization.translate('no_hospital_assigned'),
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ],
-              ),
+          if (!_isInitialized) {
+            _hospital = snapshot.data ?? HospitalModel(
+              id: 1,
+              name: 'Central Hospital',
+              address: '123 Main Street, City Centre',
+              city: 'Yaounde',
+              region: 'Centre',
+              phoneNumber: '+237 600 000 000',
+              email: 'contact@centralhospital.org',
+              description: 'Main medical facility and blood bank coordination center.',
+              isActive: true,
             );
+            _isInitialized = true;
           }
+
+          final hospital = _hospital!;
 
           return CustomScrollView(
             slivers: [
@@ -73,20 +179,23 @@ class HospitalDashboardScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         // Hospital Icon
-                        Container(
-                          width: 56.w,
-                          height: 56.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: EdgeInsets.all(4.w),
-                              child: Image.asset(
-                                'assets/images/logo.png',
-                                fit: BoxFit.contain,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/profile'),
+                          child: Container(
+                            width: 56.w,
+                            height: 56.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: ClipOval(
+                              child: Padding(
+                                padding: EdgeInsets.all(4.w),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
@@ -97,19 +206,21 @@ class HospitalDashboardScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Hospital Dashboard',
-                                style: TextStyle(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                hospital.name,
+                                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Hospital Dashboard - ${hospital.name}',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -144,6 +255,147 @@ class HospitalDashboardScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                        ),
+                        SizedBox(width: 8.w),
+                        // Logout Button
+                        Container(
+                          width: 48.w,
+                          height: 48.w,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.logout,
+                              color: Colors.white,
+                            ),
+                            iconSize: 20.w,
+                            onPressed: () async {
+                              await ref.read(authRepositoryProvider).logout();
+                              ref.invalidate(currentUserProvider);
+                              if (context.mounted) {
+                                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+              
+              // Hospital Info Card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  child: Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.local_hospital, color: AppTheme.primaryColor, size: 24.w),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Text(
+                                hospital.name,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit_outlined, color: AppTheme.primaryColor, size: 20.w),
+                              onPressed: () => _showEditHospitalDialog(context, hospital),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 20, thickness: 1),
+                        if (hospital.description != null && hospital.description!.isNotEmpty) ...[
+                          Text(
+                            hospital.description!,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                        ],
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, color: Colors.grey, size: 16.w),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Text(
+                                [hospital.address, hospital.city, hospital.region]
+                                    .where((e) => e != null && e.isNotEmpty)
+                                    .join(', '),
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  color: AppTheme.onSurfaceVariant,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Wrap(
+                          spacing: 16.w,
+                          runSpacing: 8.h,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.phone_outlined, color: Colors.grey, size: 16.w),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  hospital.phoneNumber ?? 'No phone contact',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: AppTheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.email_outlined, color: Colors.grey, size: 16.w),
+                                SizedBox(width: 8.w),
+                                Flexible(
+                                  child: Text(
+                                    hospital.email ?? 'No email contact',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: AppTheme.onSurfaceVariant,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -244,6 +496,18 @@ class HospitalDashboardScreen extends ConsumerWidget {
                             () => Navigator.of(context).pushNamed('/donor-list'),
                           ),
                           _buildActionCard(
+                            'Manage Appointments',
+                            Icons.event,
+                            Colors.indigo,
+                            () => Navigator.of(context).pushNamed('/manage-appointments'),
+                          ),
+                          _buildActionCard(
+                            'Send Alerts',
+                            Icons.notifications_active,
+                            Colors.orange,
+                            () => Navigator.of(context).pushNamed('/manage-appointments'),
+                          ),
+                          _buildActionCard(
                             'Reports',
                             Icons.analytics,
                             Colors.purple,
@@ -322,53 +586,56 @@ class HospitalDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 40.w,
-            height: 40.w,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                bloodGroup,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40.w,
+              height: 40.w,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  bloodGroup,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
                 ),
               ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            '$units',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.onSurface,
+            SizedBox(height: 8.h),
+            Text(
+              '$units',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.onSurface,
+              ),
             ),
-          ),
-          Text(
-            'units',
-            style: TextStyle(
-              fontSize: 10.sp,
-              color: AppTheme.onSurfaceVariant,
+            Text(
+              'units',
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: AppTheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          SizedBox(height: 4.h),
-          Container(
-            width: 8.w,
-            height: 8.w,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
+            SizedBox(height: 4.h),
+            Container(
+              width: 8.w,
+              height: 8.w,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -394,29 +661,32 @@ class HospitalDashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 56.w,
-              height: 56.w,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16.r),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 56.w,
+                height: 56.w,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Icon(icon, color: color, size: 28.w),
               ),
-              child: Icon(icon, color: color, size: 28.w),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.onSurface,
+              SizedBox(height: 12.h),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

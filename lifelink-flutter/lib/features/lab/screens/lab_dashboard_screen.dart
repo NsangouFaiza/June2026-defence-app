@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/appointment_repository.dart';
 import '../../../../data/repositories/donation_repository.dart';
 import '../../../../data/repositories/inventory_repository.dart';
@@ -133,22 +134,56 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.value;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Row(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/images/logo.png',
-                height: 32.h,
-                fit: BoxFit.contain,
+              Text(
+                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: Colors.white70,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(width: 8.w),
-              const Text('Lab Technician Dashboard'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 20.h,
+                    fit: BoxFit.contain,
+                  ),
+                  SizedBox(width: 8.w),
+                  Flexible(
+                    child: Text(
+                      'Lab Technician Dashboard',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_outlined),
+              onPressed: () {
+                Navigator.of(context).pushNamed('/profile');
+              },
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Appointments', icon: Icon(Icons.event)),

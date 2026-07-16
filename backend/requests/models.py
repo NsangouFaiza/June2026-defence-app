@@ -32,6 +32,16 @@ class BloodRequest(models.Model):
     is_emergency = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=20, choices=[('PENDING', 'Pending'), ('PAID', 'Paid'), ('FAILED', 'Failed')], default='PENDING')
     payment_reference = models.CharField(max_length=255, blank=True)
+    fulfillment_type = models.CharField(
+        max_length=30,
+        choices=(
+            ('DIRECT_DONATION', 'Direct Donation'),
+            ('INVENTORY', 'From Inventory'),
+        ),
+        blank=True,
+        null=True
+    )
+    donor = models.ForeignKey('donors.Donor', on_delete=models.SET_NULL, null=True, blank=True, related_name='blood_requests')
     processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_requests')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -7,6 +7,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/message_repository.dart';
 import '../../../../data/models/conversation_model.dart';
 import '../../../../data/models/message_model.dart';
+import '../../../../data/services/api_service.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
@@ -91,13 +92,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final token = prefs.getString('access_token');
       if (token == null) return;
 
-      String host = 'localhost';
-      try {
-        if (Platform.isAndroid) {
-          host = '10.0.2.2';
-        }
-      } catch (_) {}
-      final wsUrl = 'ws://$host:8000/ws/chat/$_conversationId/?token=$token';
+      final uri = Uri.parse(ApiService.baseUrl);
+      final host = uri.host;
+      final port = uri.port != 0 ? uri.port : 8000;
+      final wsUrl = 'ws://$host:$port/ws/chat/$_conversationId/?token=$token';
       _webSocket = await WebSocket.connect(wsUrl);
 
       _webSocketSubscription = _webSocket!.listen(

@@ -22,6 +22,9 @@ class RewardsScreen extends ConsumerWidget {
         appBar: AppBar(
           title: Text(localization.translate('rewards')),
           bottom: TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withOpacity(0.7),
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: localization.translate('my_badges')),
               Tab(text: localization.translate('leaderboard')),
@@ -264,7 +267,7 @@ class RewardsScreen extends ConsumerWidget {
                     fontWeight: isTopThree ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                subtitle: Text('${leader['donations'] ?? 0} donations'),
+                subtitle: Text('${leader['total_donations'] ?? 0} donations'),
                 trailing: Text(
                   '${leader['points'] ?? 0} pts',
                   style: TextStyle(

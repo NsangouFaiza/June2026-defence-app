@@ -44,6 +44,12 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
       });
 
       setState(() => _result = result.status);
+      if (result.status == 'ELIGIBLE' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are eligible! Redirecting to booking...')),
+        );
+        Navigator.of(context).pushReplacementNamed('/book-appointment');
+      }
     } catch (e) {
       setState(() => _result = 'ERROR');
     } finally {
@@ -157,6 +163,19 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        if (_result == 'ELIGIBLE') ...[
+                          SizedBox(height: 16.h),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacementNamed('/book-appointment');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.success,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Book Appointment Now'),
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -33,9 +33,13 @@ class _AppointmentBookingScreenState extends ConsumerState<AppointmentBookingScr
   }
 
   Future<void> _loadHospitals() async {
-    final hospitalRepo = ref.read(hospitalRepositoryProvider);
-    final hospitals = await hospitalRepo.getHospitals();
-    setState(() => _hospitals = hospitals);
+    try {
+      final hospitalRepo = ref.read(hospitalRepositoryProvider);
+      final hospitals = await hospitalRepo.getHospitals();
+      if (mounted) {
+        setState(() => _hospitals = hospitals);
+      }
+    } catch (_) {}
   }
 
   Future<void> _selectDate() async {
@@ -136,7 +140,10 @@ class _AppointmentBookingScreenState extends ConsumerState<AppointmentBookingScr
                   items: _hospitals
                       .map((h) => DropdownMenuItem(value: h.id, child: Text(h.name)))
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedHospitalId = value),
+                  onChanged: (value) {
+                    setState(() => _selectedHospitalId = value);
+                    _loadAvailableSlots();
+                  },
                   validator: (value) => value == null ? 'Please select a hospital' : null,
                 ),
                 SizedBox(height: 16.h),

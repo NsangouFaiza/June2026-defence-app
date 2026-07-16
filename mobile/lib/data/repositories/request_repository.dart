@@ -62,12 +62,27 @@ class RequestRepository {
     }
   }
 
-  Future<BloodRequestModel> approveRequest(int id) async {
+  Future<BloodRequestModel> approveRequest(int id, String fulfillmentType, {int? donorId}) async {
     try {
-      final response = await _apiService.post('/requests/$id/approve/');
+      final response = await _apiService.post('/requests/$id/approve/', {
+        'fulfillment_type': fulfillmentType,
+        if (donorId != null) 'donor_id': donorId,
+      });
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
       throw Exception('Failed to approve request: $e');
+    }
+  }
+
+  Future<BloodRequestModel> updateFulfillment(int id, String fulfillmentType, {int? donorId}) async {
+    try {
+      final response = await _apiService.post('/requests/$id/update-fulfillment/', {
+        'fulfillment_type': fulfillmentType,
+        if (donorId != null) 'donor_id': donorId,
+      });
+      return BloodRequestModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to update fulfillment: $e');
     }
   }
 

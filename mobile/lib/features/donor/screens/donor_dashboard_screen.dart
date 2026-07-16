@@ -6,6 +6,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/models/donor_model.dart';
+import '../../../../data/repositories/auth_repository.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 
 class DonorDashboardScreen extends ConsumerWidget {
   const DonorDashboardScreen({super.key});
@@ -14,6 +16,8 @@ class DonorDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final localization = ref.watch(localizationServiceProvider);
     final donorRepo = ref.watch(donorRepositoryProvider);
+    final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.value;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -29,28 +33,49 @@ class DonorDashboardScreen extends ConsumerWidget {
 
           final donor = snapshot.data;
           if (donor == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.person_outline,
-                    size: 64.w,
-                    color: Colors.grey,
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(localization.translate('donor_dashboard')),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.person_outlined),
+                    onPressed: () => Navigator.of(context).pushNamed('/profile'),
                   ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    localization.translate('no_donor_profile'),
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  SizedBox(height: 16.h),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Create donor profile
+                  IconButton(
+                    icon: const Icon(Icons.logout),
+                    onPressed: () async {
+                      await ref.read(authRepositoryProvider).logout();
+                      ref.invalidate(currentUserProvider);
+                      if (context.mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      }
                     },
-                    child: Text(localization.translate('create_profile')),
                   ),
                 ],
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.person_outline,
+                      size: 64.w,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      localization.translate('no_donor_profile'),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Create donor profile
+                      },
+                      child: Text(localization.translate('create_profile')),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -80,18 +105,21 @@ class DonorDashboardScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         // Profile Avatar
-                        Container(
-                          width: 56.w,
-                          height: 56.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 28.w,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/profile'),
+                          child: Container(
+                            width: 56.w,
+                            height: 56.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 28.w,
+                            ),
                           ),
                         ),
                         SizedBox(width: 16.w),
@@ -100,11 +128,12 @@ class DonorDashboardScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Welcome Back',
+                                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Row(
                                 children: [
@@ -122,12 +151,15 @@ class DonorDashboardScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
-                                  Text(
-                                    'Donor Dashboard',
-                                    style: TextStyle(
-                                      fontSize: 20.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  Expanded(
+                                    child: Text(
+                                      'Donor Dashboard',
+                                      style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -136,34 +168,37 @@ class DonorDashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         // Notification Icon
-                        Container(
-                          width: 48.w,
-                          height: 48.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 24.w,
-                              ),
-                              Positioned(
-                                top: 8.w,
-                                right: 8.w,
-                                child: Container(
-                                  width: 8.w,
-                                  height: 8.w,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/notifications'),
+                          child: Container(
+                            width: 48.w,
+                            height: 48.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 24.w,
+                                ),
+                                Positioned(
+                                  top: 8.w,
+                                  right: 8.w,
+                                  child: Container(
+                                    width: 8.w,
+                                    height: 8.w,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -177,7 +212,7 @@ class DonorDashboardScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24.w),
-                  child: _buildDonationStatusCard(donor),
+                  child: _buildDonationStatusCard(context, donor),
                 ),
               ),
               SliverToBoxAdapter(child: SizedBox(height: 24.h)),
@@ -233,7 +268,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                           SizedBox(width: 12.w),
                           Expanded(
                             child: _buildStatCard(
-                              '1,250',
+                              '${(donor.totalDonations * 50).toString()}',
                               'Rewards Points',
                               Icons.emoji_events,
                               Colors.amber,
@@ -275,7 +310,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                             'Donate Now',
                             Icons.bloodtype,
                             AppTheme.primaryColor,
-                            () => Navigator.of(context).pushNamed('/book-appointment'),
+                            () => Navigator.of(context).pushNamed('/eligibility-check'),
                           ),
                           _buildActionCard(
                             'Schedule',
@@ -294,6 +329,18 @@ class DonorDashboardScreen extends ConsumerWidget {
                             Icons.history,
                             AppTheme.warning,
                             () => Navigator.of(context).pushNamed('/donation-history'),
+                          ),
+                          _buildActionCard(
+                            localization.translate('chat'),
+                            Icons.chat_bubble,
+                            Colors.indigo,
+                            () => Navigator.of(context).pushNamed('/chat-list'),
+                          ),
+                          _buildActionCard(
+                            localization.translate('rewards'),
+                            Icons.emoji_events,
+                            Colors.amber[800]!,
+                            () => Navigator.of(context).pushNamed('/rewards'),
                           ),
                         ],
                       ),
@@ -329,40 +376,46 @@ class DonorDashboardScreen extends ConsumerWidget {
                       ),
                       SizedBox(height: 16.h),
                       SizedBox(
-                        height: 120.h,
+                        height: 130.h,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
                             _buildAchievementBadge(
-                              'First Donation',
-                              Icons.star,
-                              Colors.amber,
-                              true,
+                              'Bronze Level',
+                              '3+ Donations',
+                              Icons.military_tech,
+                              Colors.brown,
+                              donor.totalDonations >= 3,
                             ),
                             SizedBox(width: 12.w),
                             _buildAchievementBadge(
-                              '5 Donations',
-                              Icons.military_tech,
-                              Colors.blue,
+                              'Silver Level',
+                              '5+ Donations',
+                              Icons.workspace_premium,
+                              Colors.blueGrey,
                               donor.totalDonations >= 5,
                             ),
                             SizedBox(width: 12.w),
                             _buildAchievementBadge(
-                              '10 Donations',
+                              'Gold Level',
+                              '8+ Donations',
                               Icons.emoji_events,
-                              Colors.purple,
-                              donor.totalDonations >= 10,
+                              Colors.amber,
+                              donor.totalDonations >= 8,
                             ),
                             SizedBox(width: 12.w),
                             _buildAchievementBadge(
-                              'Life Saver',
-                              Icons.favorite,
-                              Colors.red,
-                              donor.totalDonations >= 20,
+                              'Platinum Level',
+                              '10+ Donations',
+                              Icons.stars,
+                              Colors.teal,
+                              donor.totalDonations >= 10,
                             ),
                           ],
                         ),
                       ),
+                      SizedBox(height: 12.h),
+                      _buildAchievementProgress(donor),
                     ],
                   ),
                 ),
@@ -375,21 +428,43 @@ class DonorDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDonationStatusCard(DonorModel donor) {
+  Widget _buildDonationStatusCard(BuildContext context, DonorModel donor) {
+    final today = DateTime.now();
+    int? daysRemaining;
+    String lastDonationText = 'No previous donations logged';
+
+    if (donor.lastDonationDate != null) {
+      final lastDonation = DateTime(donor.lastDonationDate!.year, donor.lastDonationDate!.month, donor.lastDonationDate!.day);
+      final current = DateTime(today.year, today.month, today.day);
+      final daysPassed = current.difference(lastDonation).inDays;
+      daysRemaining = 60 - daysPassed;
+      lastDonationText = 'Last Donation: ${donor.lastDonationDate!.year}-${donor.lastDonationDate!.month.toString().padLeft(2, '0')}-${donor.lastDonationDate!.day.toString().padLeft(2, '0')}';
+    }
+
+    final isSystemicEligible = (daysRemaining == null || daysRemaining <= 0);
+    final overallEligible = donor.isEligible && isSystemicEligible;
+
+    String eligibilityMessage = 'You can donate blood today!';
+    if (!donor.isEligible) {
+      eligibilityMessage = donor.eligibilityReason ?? 'Temporary exclusion active';
+    } else if (daysRemaining != null && daysRemaining > 0) {
+      eligibilityMessage = '⏳ $daysRemaining day(s) until next eligible donation';
+    }
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: donor.isEligible
+          colors: overallEligible
               ? [AppTheme.success, AppTheme.successDark]
               : [AppTheme.warning, AppTheme.warningDark],
         ),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: (donor.isEligible ? AppTheme.success : AppTheme.warning).withOpacity(0.3),
+            color: (overallEligible ? AppTheme.success : AppTheme.warning).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -405,7 +480,7 @@ class DonorDashboardScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Icon(
-              donor.isEligible ? Icons.check_circle : Icons.schedule,
+              overallEligible ? Icons.check_circle : Icons.schedule,
               color: Colors.white,
               size: 32.w,
             ),
@@ -416,7 +491,7 @@ class DonorDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  donor.isEligible ? 'Eligible to Donate' : 'Waiting Period',
+                  overallEligible ? 'Eligible to Donate' : 'Waiting / Restrained Period',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
@@ -425,30 +500,40 @@ class DonorDashboardScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  donor.isEligible
-                      ? 'You can donate blood today!'
-                      : 'Next eligible: ${donor.nextEligibleDate ?? 'Check with clinic'}',
+                  lastDonationText,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: Colors.white.withOpacity(0.85),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  eligibilityMessage,
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ],
             ),
           ),
-          if (donor.isEligible)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Text(
-                'Donate',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.success,
+          if (overallEligible)
+            InkWell(
+              onTap: () => Navigator.of(context).pushNamed('/book-appointment'),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  'Donate',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.success,
+                  ),
                 ),
               ),
             ),
@@ -552,13 +637,14 @@ class DonorDashboardScreen extends ConsumerWidget {
 
   Widget _buildAchievementBadge(
     String title,
+    String subtitle,
     IconData icon,
     Color color,
     bool unlocked,
   ) {
     return Container(
-      width: 100.w,
-      padding: EdgeInsets.all(16.w),
+      width: 108.w,
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: unlocked ? color.withOpacity(0.1) : Colors.grey[200],
         borderRadius: BorderRadius.circular(16.r),
@@ -567,23 +653,107 @@ class DonorDashboardScreen extends ConsumerWidget {
           width: 2,
         ),
       ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: unlocked ? color : Colors.grey[400],
+              size: 32.w,
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+                color: unlocked ? AppTheme.onSurface : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 9.sp,
+                color: unlocked ? color : Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementProgress(DonorModel donor) {
+    int nextThreshold = 3;
+    String nextLevel = 'Bronze';
+    if (donor.totalDonations >= 8) {
+      nextThreshold = 10;
+      nextLevel = 'Platinum';
+    } else if (donor.totalDonations >= 5) {
+      nextThreshold = 8;
+      nextLevel = 'Gold';
+    } else if (donor.totalDonations >= 3) {
+      nextThreshold = 5;
+      nextLevel = 'Silver';
+    }
+
+    final double progress = (donor.totalDonations / nextThreshold).clamp(0.0, 1.0);
+    final int remaining = nextThreshold - donor.totalDonations;
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: unlocked ? color : Colors.grey[400],
-            size: 32.w,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                donor.totalDonations >= 10
+                    ? 'All levels unlocked! 🎉'
+                    : 'Next Level: $nextLevel',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.onSurface,
+                ),
+              ),
+              if (donor.totalDonations < 10)
+                Text(
+                  '$remaining more to go',
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 8.h),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-              color: unlocked ? AppTheme.onSurface : Colors.grey[500],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[200],
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              minHeight: 6.h,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

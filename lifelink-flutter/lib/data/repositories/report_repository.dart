@@ -49,4 +49,24 @@ class ReportRepository {
       throw Exception('Failed to load emergency reports: $e');
     }
   }
+
+  Future<Map<String, dynamic>> getExplorerReport({
+    required String type,
+    String? startDate,
+    String? endDate,
+    String? search,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'type': type,
+        if (startDate != null) 'start_date': startDate,
+        if (endDate != null) 'end_date': endDate,
+        if (search != null) 'search': search,
+      };
+      final response = await _apiService.get('/reports/explorer/', queryParameters: params);
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to load explorer report for $type: $e');
+    }
+  }
 }

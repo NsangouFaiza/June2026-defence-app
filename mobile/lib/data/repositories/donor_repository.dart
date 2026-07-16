@@ -16,7 +16,7 @@ class DonorRepository {
 
   Future<DonorModel?> getCurrentDonorProfile() async {
     try {
-      final response = await _apiService.get('/donors/me/');
+      final response = await _apiService.get('/donors/my_profile/');
       return DonorModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -52,6 +52,25 @@ class DonorRepository {
       return (response.data as List).map((json) => DonorModel.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to search donors: $e');
+    }
+  }
+
+  Future<DonorModel> updateEligibility(int id, String status, String reason) async {
+    try {
+      final response = await _apiService.post(
+        '/donors/$id/update_eligibility/',
+        {
+          'status': status,
+          'reason': reason,
+        },
+      );
+      return DonorModel.fromJson(response.data);
+    } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final errorMsg = e.response?.data['error'] ?? e.response?.data['detail'] ?? e.toString();
+        throw Exception(errorMsg);
+      }
+      throw Exception('Failed to update eligibility: $e');
     }
   }
 }

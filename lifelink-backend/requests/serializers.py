@@ -13,6 +13,13 @@ class BloodRequestSerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source='patient.user.full_name', read_only=True)
     hospital = serializers.IntegerField(source='hospital.id', read_only=True, allow_null=True)
     hospital_name = serializers.CharField(source='hospital.name', read_only=True, allow_null=True)
+    reason = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    donor_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    donor = serializers.IntegerField(source='donor.id', read_only=True, allow_null=True)
+    donor_name = serializers.CharField(source='donor.user.full_name', read_only=True, allow_null=True)
+    donor_phone = serializers.CharField(source='donor.user.phone_number', read_only=True, allow_null=True)
+    donor_email = serializers.CharField(source='donor.user.email', read_only=True, allow_null=True)
 
     class Meta:
         model = BloodRequest
@@ -21,7 +28,8 @@ class BloodRequestSerializer(serializers.ModelSerializer):
             'patient', 'patient_name', 'hospital', 'hospital_name',
             'blood_group', 'quantity', 'urgency', 'is_emergency',
             'status', 'reason', 'notes', 'payment_status', 'payment_reference',
-            'created_at', 'updated_at',
+            'fulfillment_type', 'donor_id', 'donor', 'donor_name', 'donor_phone',
+            'donor_email', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'payment_status', 'payment_reference']
 
@@ -36,7 +44,12 @@ class BloodRequestSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         patient_id = attrs.pop('patient_id', None)
         hospital_id = attrs.pop('hospital_id', None)
+        donor_id = attrs.pop('donor_id', None)
         is_emergency = attrs.get('is_emergency', False)
+
+        # Normalize null values to empty strings to prevent database IntegrityError
+        attrs['reason'] = attrs.get('reason') or ''
+        attrs['notes'] = attrs.get('notes') or ''
 
         if not hospital_id and not is_emergency:
             raise serializers.ValidationError({'hospital_id': 'This field is required.'})
@@ -54,5 +67,12 @@ class BloodRequestSerializer(serializers.ModelSerializer):
                 attrs['hospital'] = Hospital.objects.get(pk=hospital_id)
             except Hospital.DoesNotExist:
                 raise serializers.ValidationError({'hospital_id': 'Invalid hospital ID'})
+
+        if donor_id:
+            from donors.models import Donor
+            try:
+                attrs['donor'] = Donor.objects.get(pk=donor_id)
+            except Donor.DoesNotExist:
+                raise serializers.ValidationError({'donor_id': 'Invalid donor ID'})
 
         return attrs

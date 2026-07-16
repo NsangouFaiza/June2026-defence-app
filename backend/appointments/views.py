@@ -17,29 +17,41 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     filterset_fields = ['donor', 'hospital', 'status', 'scheduled_date']
     search_fields = ['donor__user__first_name', 'donor__user__last_name', 'hospital__name']
 
+    def create(self, request, *args, **kwargs):
+        print("APPOINTMENT CREATE REQUEST DATA:", request.data, flush=True)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("APPOINTMENT SERIALIZER ERRORS:", serializer.errors, flush=True)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         from donors.models import Donor
-        try:
-            donor = Donor.objects.get(user=self.request.user)
-            serializer.save(donor=donor)
-        except Donor.DoesNotExist:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({'detail': 'User is not registered as a Donor.'})
+        is_staff = self.request.user.is_staff or self.request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin', 'lab_technician')
+        donor_id = self.request.data.get('donor')
+        
+        if is_staff and donor_id:
+            try:
+                donor = Donor.objects.get(pk=donor_id)
+            except Donor.DoesNotExist:
+                donor, created = Donor.objects.get_or_create(user=self.request.user)
+        else:
+            donor, created = Donor.objects.get_or_create(user=self.request.user)
+            
+        serializer.save(donor=donor)
 
     @action(detail=False, methods=['get'])
     def my_appointments(self, request):
         """Get current user's appointments."""
+        from donors.models import Donor
         try:
-            from donors.models import Donor
             donor = Donor.objects.get(user=request.user)
             queryset = Appointment.objects.filter(donor=donor)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         except Donor.DoesNotExist:
-            return Response(
-                {'error': 'Donor profile not found'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response([])
 
     @action(detail=False, methods=['get'])
     def upcoming(self, request):
@@ -51,7 +63,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='available-slots')
     def available_slots(self, request):
         """Get available time slots for a hospital on a given date."""
         hospital_id = request.query_params.get('hospital')

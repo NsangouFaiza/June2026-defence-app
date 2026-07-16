@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/admin_repository.dart';
 import '../../../../data/models/user_model.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -14,23 +15,56 @@ class AdminPanelScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final localization = ref.watch(localizationServiceProvider);
     final adminRepo = ref.watch(adminRepositoryProvider);
+    final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.value;
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Row(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/images/logo.png',
-                height: 32.h,
-                fit: BoxFit.contain,
+              Text(
+                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: Colors.white70,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(width: 8.w),
-              Text(localization.translate('admin_panel')),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 20.h,
+                    fit: BoxFit.contain,
+                  ),
+                  SizedBox(width: 8.w),
+                  Flexible(
+                    child: Text(
+                      localization.translate('admin_panel'),
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_outlined),
+              onPressed: () {
+                Navigator.of(context).pushNamed('/profile');
+              },
+            ),
+          ],
           bottom: TabBar(
             tabs: [
               Tab(text: localization.translate('users')),

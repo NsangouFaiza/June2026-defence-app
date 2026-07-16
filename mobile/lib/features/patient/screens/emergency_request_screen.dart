@@ -39,7 +39,7 @@ class _EmergencyRequestScreenState extends ConsumerState<EmergencyRequestScreen>
         'blood_group': _selectedBloodGroup,
         'quantity': _quantity,
         'urgency': _selectedUrgency,
-        'reason': _reason,
+        'reason': _reason ?? '',
       });
 
       if (mounted) {

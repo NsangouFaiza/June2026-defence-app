@@ -33,6 +33,20 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     _loadHospitals();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      if (args['bloodGroup'] != null && _selectedBloodGroup == null) {
+        _selectedBloodGroup = args['bloodGroup'] as String;
+      }
+      if (args['hospitalId'] != null && _selectedHospitalId == null) {
+        _selectedHospitalId = args['hospitalId'].toString();
+      }
+    }
+  }
+
   Future<void> _loadHospitals() async {
     try {
       final hospitalRepo = ref.read(hospitalRepositoryProvider);
@@ -60,7 +74,7 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
         'urgency': _selectedUrgency,
         'hospital_id': int.parse(_selectedHospitalId!),
         'is_emergency': _isEmergency,
-        'reason': _reason,
+        'reason': _reason ?? '',
       });
 
       if (mounted) {

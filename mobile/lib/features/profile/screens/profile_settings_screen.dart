@@ -83,15 +83,40 @@ class ProfileSettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    localization.translate('personal_information'),
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        localization.translate('personal_information'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: AppTheme.primaryColor),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => _EditProfileDialog(user: user),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   SizedBox(height: 16.h),
                   _buildInfoRow(context, localization.translate('full_name'), user.fullName),
                   _buildInfoRow(context, localization.translate('email'), user.email),
                   _buildInfoRow(context, localization.translate('phone'), user.phoneNumber),
                   _buildInfoRow(context, localization.translate('blood_group'), user.bloodGroup ?? 'N/A'),
+                  _buildInfoRow(context, localization.translate('gender'), user.gender == 'M' ? 'Male' : (user.gender == 'F' ? 'Female' : 'N/A')),
+                  _buildInfoRow(
+                    context,
+                    localization.translate('date_of_birth'),
+                    user.dateOfBirth == null
+                        ? 'N/A'
+                        : user.dateOfBirth!.toLocal().toString().split(' ')[0],
+                  ),
+                  _buildInfoRow(context, localization.translate('address'), user.address ?? 'N/A'),
+                  _buildInfoRow(context, localization.translate('city'), user.city ?? 'N/A'),
+                  _buildInfoRow(context, localization.translate('region'), user.region ?? 'N/A'),
                   _buildInfoRow(context, localization.translate('role'), user.role.toUpperCase()),
                 ],
               ),
@@ -278,6 +303,250 @@ class ProfileSettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EditProfileDialog extends ConsumerStatefulWidget {
+  final UserModel user;
+  const _EditProfileDialog({required this.user});
+
+  @override
+  ConsumerState<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends ConsumerState<_EditProfileDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _regionController;
+  
+  String? _selectedGender;
+  String? _selectedBloodGroup;
+  DateTime? _selectedDateOfBirth;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fullNameController = TextEditingController(text: widget.user.fullName);
+    _phoneController = TextEditingController(text: widget.user.phoneNumber);
+    _addressController = TextEditingController(text: widget.user.address);
+    _cityController = TextEditingController(text: widget.user.city);
+    _regionController = TextEditingController(text: widget.user.region);
+    _selectedGender = widget.user.gender;
+    _selectedBloodGroup = widget.user.bloodGroup;
+    _selectedDateOfBirth = widget.user.dateOfBirth;
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _regionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final updatedData = {
+        'full_name': _fullNameController.text,
+        'phone_number': _phoneController.text,
+        'gender': _selectedGender,
+        'blood_group': _selectedBloodGroup,
+        'address': _addressController.text,
+        'city': _cityController.text,
+        'region': _regionController.text,
+        if (_selectedDateOfBirth != null)
+          'date_of_birth': _selectedDateOfBirth!.toLocal().toString().split(' ')[0],
+      };
+
+      await ref.read(authRepositoryProvider).updateProfile(updatedData);
+      ref.invalidate(currentUserProvider);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final localization = ref.watch(localizationServiceProvider);
+
+    return AlertDialog(
+      title: Text(localization.translate('edit')),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _fullNameController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('full_name'),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your full name';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 8.h),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('phone'),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your phone number';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 8.h),
+                DropdownButtonFormField<String>(
+                  value: _selectedGender,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('gender'),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'M', child: Text('Male')),
+                    DropdownMenuItem(value: 'F', child: Text('Female')),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedGender = val;
+                    });
+                  },
+                ),
+                SizedBox(height: 8.h),
+                DropdownButtonFormField<String>(
+                  value: _selectedBloodGroup,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('blood_group'),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'A+', child: Text('A+')),
+                    DropdownMenuItem(value: 'A-', child: Text('A-')),
+                    DropdownMenuItem(value: 'B+', child: Text('B+')),
+                    DropdownMenuItem(value: 'B-', child: Text('B-')),
+                    DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                    DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                    DropdownMenuItem(value: 'O+', child: Text('O+')),
+                    DropdownMenuItem(value: 'O-', child: Text('O-')),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedBloodGroup = val;
+                    });
+                  },
+                ),
+                SizedBox(height: 8.h),
+                InkWell(
+                  onTap: () async {
+                    final pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDateOfBirth ?? DateTime.now().subtract(const Duration(days: 365 * 18)),
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime.now(),
+                    );
+                    if (pickedDate != null) {
+                      setState(() {
+                        _selectedDateOfBirth = pickedDate;
+                      });
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: localization.translate('date_of_birth'),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedDateOfBirth == null
+                              ? 'Select Date'
+                              : _selectedDateOfBirth!.toLocal().toString().split(' ')[0],
+                        ),
+                        const Icon(Icons.calendar_today, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('address'),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                TextFormField(
+                  controller: _cityController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('city'),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                TextFormField(
+                  controller: _regionController,
+                  decoration: InputDecoration(
+                    labelText: localization.translate('region'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: Text(localization.translate('cancel')),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _saveProfile,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(localization.translate('save')),
+        ),
+      ],
     );
   }
 }

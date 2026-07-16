@@ -28,30 +28,36 @@ class _HospitalMapScreenState extends ConsumerState<HospitalMapScreen> {
   }
 
   Future<void> _loadHospitals() async {
-    final hospitalRepo = ref.read(hospitalRepositoryProvider);
-    final hospitals = await hospitalRepo.getHospitals();
-    setState(() {
-      _hospitals = hospitals;
-      _markers.clear();
-      for (final hospital in hospitals) {
-        if (hospital.latitude != null && hospital.longitude != null) {
-          _markers.add(
-            Marker(
-              markerId: MarkerId(hospital.id.toString()),
-              position: LatLng(hospital.latitude!, hospital.longitude!),
-              infoWindow: InfoWindow(
-                title: hospital.name,
-                snippet: '${hospital.address} • ${hospital.phoneNumber}',
+    try {
+      final hospitalRepo = ref.read(hospitalRepositoryProvider);
+      final hospitals = await hospitalRepo.getHospitals();
+      setState(() {
+        _hospitals = hospitals;
+        _markers.clear();
+        for (final hospital in hospitals) {
+          if (hospital.latitude != null && hospital.longitude != null) {
+            _markers.add(
+              Marker(
+                markerId: MarkerId(hospital.id.toString()),
+                position: LatLng(hospital.latitude!, hospital.longitude!),
+                infoWindow: InfoWindow(
+                  title: hospital.name,
+                  snippet: '${hospital.address} • ${hospital.phoneNumber}',
+                ),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueRed,
+                ),
               ),
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueRed,
-              ),
-            ),
-          );
+            );
+          }
         }
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
-      setState(() => _isLoading = false);
-    });
+    }
   }
 
   void _onMapCreated(GoogleMapController controller) {

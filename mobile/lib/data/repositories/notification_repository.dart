@@ -40,4 +40,27 @@ class NotificationRepository {
       throw Exception('Failed to get unread count: $e');
     }
   }
+
+  Future<void> sendCustomNotification({
+    required String title,
+    required String message,
+    int? recipientId,
+  }) async {
+    try {
+      await _apiService.post(
+        '/notifications/send/',
+        {
+          'title': title,
+          'message': message,
+          if (recipientId != null) 'recipient_id': recipientId,
+        },
+      );
+    } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final errorMsg = e.response?.data['error'] ?? e.response?.data['detail'] ?? e.toString();
+        throw Exception(errorMsg);
+      }
+      throw Exception('Failed to send notification: $e');
+    }
+  }
 }

@@ -52,6 +52,25 @@ class CheckEligibilityAPIView(APIView):
         if has_medical_condition:
             reasons.append('Medical condition')
 
+        # Update donor profile if user is authenticated and registered as a donor
+        if request.user and request.user.is_authenticated:
+            from donors.models import Donor
+            try:
+                donor = Donor.objects.get(user=request.user)
+                if weight:
+                    donor.weight = float(weight)
+                if reasons:
+                    donor.is_eligible = False
+                    donor.eligibility_status = 'temporarily_ineligible'
+                    donor.eligibility_reason = '; '.join(reasons)
+                else:
+                    donor.is_eligible = True
+                    donor.eligibility_status = 'eligible'
+                    donor.eligibility_reason = ''
+                donor.save()
+            except Donor.DoesNotExist:
+                pass
+
         if reasons:
             return Response({
                 'status': 'TEMP_INELIGIBLE',

@@ -54,13 +54,13 @@ class Donation(models.Model):
                 from django.utils import timezone
                 donor.is_eligible = timezone.now().date() >= donor.next_eligible_date
             
-            donor.points = donor.total_donations * 100
+            donor.points = donor.total_donations * 50
             
-            if donor.points >= 1000:
+            if donor.points >= 500:
                 donor.level = 'Platinum'
-            elif donor.points >= 600:
+            elif donor.points >= 400:
                 donor.level = 'Gold'
-            elif donor.points >= 300:
+            elif donor.points >= 250:
                 donor.level = 'Silver'
             else:
                 donor.level = 'Bronze'

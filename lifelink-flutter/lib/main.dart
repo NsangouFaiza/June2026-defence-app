@@ -16,12 +16,15 @@ import 'features/donor/screens/donor_dashboard_screen.dart';
 import 'features/patient/screens/patient_dashboard_screen.dart';
 import 'features/hospital/screens/hospital_dashboard_screen.dart';
 import 'features/hospital/screens/blood_inventory_screen.dart';
+import 'features/hospital/screens/manage_appointments_screen.dart';
 import 'features/patient/screens/blood_request_screen.dart';
 import 'features/patient/screens/blood_search_screen.dart';
 import 'features/patient/screens/emergency_request_screen.dart';
+import 'features/patient/screens/available_blood_packs_screen.dart';
 import 'features/donors/screens/donor_list_screen.dart';
 import 'features/donors/screens/donor_details_screen.dart';
 import 'features/chat/screens/chat_screen.dart';
+import 'features/chat/screens/chat_list_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/map/screens/hospital_locator_screen.dart';
 import 'features/appointments/screens/appointment_booking_screen.dart';
@@ -113,6 +116,8 @@ class LifeLinkApp extends ConsumerWidget {
             },
             '/notifications': (context) => const NotificationsScreen(),
             '/hospital-locator': (context) => const HospitalLocatorScreen(),
+            '/available-blood-packs': (context) => const AvailableBloodPacksScreen(),
+            '/chat-list': (context) => const ChatListScreen(),
             '/book-appointment': (context) => const AppointmentBookingScreen(),
             '/appointment-history': (context) => const AppointmentHistoryScreen(),
             '/campaigns': (context) => const CampaignsScreen(),
@@ -126,6 +131,7 @@ class LifeLinkApp extends ConsumerWidget {
             '/leaderboard': (context) => const LeaderboardScreen(),
             '/impact-statistics': (context) => const ImpactStatisticsScreen(),
             '/reports': (context) => const ReportsScreen(),
+            '/manage-appointments': (context) => const ManageAppointmentsScreen(),
             '/admin-panel': (context) => const RoleGuard(allowedRoles: ['system_admin', 'blood_bank_admin'], child: AdminPanelScreen()),
             '/eligibility-check': (context) => const EligibilityCheckScreen(),
             '/donation-history': (context) => const DonationHistoryScreen(),

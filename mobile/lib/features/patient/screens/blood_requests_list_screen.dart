@@ -6,6 +6,8 @@ import '../../../core/utils/localization_service.dart';
 import '../../../core/providers/providers.dart';
 import '../../../data/models/blood_request_model.dart';
 import '../../../data/repositories/request_repository.dart';
+import '../../../data/models/donor_model.dart';
+import '../../../data/repositories/donor_repository.dart';
 
 class BloodRequestsListScreen extends ConsumerStatefulWidget {
   const BloodRequestsListScreen({super.key});
@@ -18,12 +20,268 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
   bool _isActionLoading = false;
 
   Future<void> _handleApprove(int id) async {
+    final localization = ref.read(localizationServiceProvider);
+    
+    // Fetch donors
+    List<DonorModel> donors = [];
+    try {
+      donors = await ref.read(donorRepositoryProvider).getDonors();
+    } catch (_) {}
+
+    String selectedType = 'DIRECT_DONATION';
+    DonorModel? selectedDonor;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Select Blood Source'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Please specify the blood fulfillment source to approve this request:'),
+                    SizedBox(height: 12.h),
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
+                      decoration: const InputDecoration(
+                        labelText: 'Fulfillment Source',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'DIRECT_DONATION',
+                          child: Text('Direct Donation'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'INVENTORY',
+                          child: Text('From Inventory'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            selectedType = val;
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedType == 'DIRECT_DONATION') ...[
+                      SizedBox(height: 16.h),
+                      const Text(
+                        'Select Donor (Optional):',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8.h),
+                      DropdownButtonFormField<DonorModel?>(
+                        value: selectedDonor,
+                        decoration: const InputDecoration(
+                          labelText: 'Assigned Donor',
+                          border: OutlineInputBorder(),
+                        ),
+                        hint: const Text('Select a donor...'),
+                        items: [
+                          const DropdownMenuItem<DonorModel?>(
+                            value: null,
+                            child: Text('None (Unassigned)'),
+                          ),
+                          ...donors.map((d) => DropdownMenuItem<DonorModel?>(
+                                value: d,
+                                child: Text('${d.fullName} (${d.bloodGroup ?? "N/A"})'),
+                              )),
+                        ],
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedDonor = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: Text(localization.translate('cancel')),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop({
+                      'fulfillment_type': selectedType,
+                      'donor_id': selectedDonor?.id,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.success,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Approve'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null) return;
+
     setState(() => _isActionLoading = true);
     try {
-      await ref.read(requestRepositoryProvider).approveRequest(id);
+      await ref.read(requestRepositoryProvider).approveRequest(
+            id,
+            result['fulfillment_type'] as String,
+            donorId: result['donor_id'] as int?,
+          );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Request approved successfully'), backgroundColor: AppTheme.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _handleManageFulfillment(BloodRequestModel request) async {
+    final localization = ref.read(localizationServiceProvider);
+    
+    // Fetch donors
+    List<DonorModel> donors = [];
+    try {
+      donors = await ref.read(donorRepositoryProvider).getDonors();
+    } catch (_) {}
+
+    String selectedType = request.fulfillmentType ?? 'DIRECT_DONATION';
+    DonorModel? selectedDonor;
+    if (request.donorId != null && donors.isNotEmpty) {
+      try {
+        selectedDonor = donors.firstWhere((d) => d.id == request.donorId);
+      } catch (_) {}
+    }
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Manage Fulfillment'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Change fulfillment source for this request:'),
+                    SizedBox(height: 12.h),
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
+                      decoration: const InputDecoration(
+                        labelText: 'Fulfillment Source',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'DIRECT_DONATION',
+                          child: Text('Direct Donation'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'INVENTORY',
+                          child: Text('From Inventory'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            selectedType = val;
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedType == 'DIRECT_DONATION') ...[
+                      SizedBox(height: 16.h),
+                      const Text(
+                        'Select Donor (Optional):',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8.h),
+                      DropdownButtonFormField<DonorModel?>(
+                        value: selectedDonor,
+                        decoration: const InputDecoration(
+                          labelText: 'Assigned Donor',
+                          border: OutlineInputBorder(),
+                        ),
+                        hint: const Text('Select a donor...'),
+                        items: [
+                          const DropdownMenuItem<DonorModel?>(
+                            value: null,
+                            child: Text('None (Unassigned)'),
+                          ),
+                          ...donors.map((d) => DropdownMenuItem<DonorModel?>(
+                                value: d,
+                                child: Text('${d.fullName} (${d.bloodGroup ?? "N/A"})'),
+                              )),
+                        ],
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedDonor = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: Text(localization.translate('cancel')),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop({
+                      'fulfillment_type': selectedType,
+                      'donor_id': selectedDonor?.id,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      await ref.read(requestRepositoryProvider).updateFulfillment(
+            request.id,
+            result['fulfillment_type'] as String,
+            donorId: result['donor_id'] as int?,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fulfillment source updated successfully'),
+            backgroundColor: AppTheme.success,
+          ),
         );
       }
     } catch (e) {
@@ -155,6 +413,33 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                   requests = requests.where((r) => r.status == 'PENDING' || r.status == 'APPROVED').toList();
                 }
 
+                // If staff, sort emergency & high priority requests to the very top
+                if (isStaff) {
+                  requests = List<BloodRequestModel>.from(requests);
+                  requests.sort((a, b) {
+                    // First sort: Emergency
+                    if (a.isEmergency && !b.isEmergency) return -1;
+                    if (!a.isEmergency && b.isEmergency) return 1;
+
+                    // Second sort: Active requests first
+                    final aActive = (a.status == 'PENDING' || a.status == 'APPROVED');
+                    final bActive = (b.status == 'PENDING' || b.status == 'APPROVED');
+                    if (aActive && !bActive) return -1;
+                    if (!aActive && bActive) return 1;
+
+                    // Third sort: Urgency level (HIGH > MEDIUM > LOW)
+                    final urgencyOrder = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2};
+                    final aOrder = urgencyOrder[a.urgency.toUpperCase()] ?? 3;
+                    final bOrder = urgencyOrder[b.urgency.toUpperCase()] ?? 3;
+                    if (aOrder != bOrder) {
+                      return aOrder.compareTo(bOrder);
+                    }
+
+                    // Fourth sort: Newest requests first
+                    return b.createdAt.compareTo(a.createdAt);
+                  });
+                }
+
                 if (requests.isEmpty) {
                   return Center(
                     child: Column(
@@ -206,9 +491,14 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
+        border: request.isEmergency 
+            ? Border.all(color: AppTheme.error, width: 2.w)
+            : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: request.isEmergency 
+                ? AppTheme.error.withOpacity(0.08) 
+                : Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -217,6 +507,33 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (request.isEmergency || request.urgency.toUpperCase() == 'HIGH') ...[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              margin: EdgeInsets.only(bottom: 12.h),
+              decoration: BoxDecoration(
+                color: AppTheme.error.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: AppTheme.error.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppTheme.error),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      request.isEmergency ? '🚨 CRITICAL EMERGENCY REQUEST' : '⚠️ HIGH PRIORITY REQUEST',
+                      style: TextStyle(
+                        color: AppTheme.error,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Header Row
           Row(
             children: [
@@ -284,6 +601,112 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                 fontSize: 13.sp,
                 color: AppTheme.onSurfaceVariant,
                 fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+
+          if (request.fulfillmentType != null) ...[
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: AppTheme.onSurfaceVariant.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    request.fulfillmentType == 'INVENTORY' ? Icons.inventory_2_outlined : Icons.volunteer_activism_outlined,
+                    size: 16.sp,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      request.fulfillmentType == 'INVENTORY' ? 'Fulfilled from Inventory' : 'Direct Donation',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (isStaff && (request.status.toUpperCase() == 'APPROVED' || request.status.toUpperCase() == 'PENDING'))
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _handleManageFulfillment(request),
+                      color: AppTheme.primaryColor,
+                      tooltip: 'Change Source',
+                    ),
+                ],
+              ),
+            ),
+          ],
+
+          if (request.fulfillmentType == 'DIRECT_DONATION') ...[
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: Colors.red.withOpacity(0.1), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person, color: AppTheme.primaryColor, size: 18),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Donor Information',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  if (request.donorName != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Name:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
+                        Text(request.donorName!, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+                      ],
+                    ),
+                    if (request.donorPhone != null && request.donorPhone!.isNotEmpty) ...[
+                      SizedBox(height: 6.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Phone:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
+                          Text(request.donorPhone!, style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface)),
+                        ],
+                      ),
+                    ],
+                    if (request.donorEmail != null && request.donorEmail!.isNotEmpty) ...[
+                      SizedBox(height: 6.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Email:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
+                          Text(request.donorEmail!, style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface)),
+                        ],
+                      ),
+                    ],
+                  ] else ...[
+                    Text(
+                      'No donor linked to this direct donation request yet.',
+                      style: TextStyle(fontSize: 12.sp, fontStyle: FontStyle.italic, color: AppTheme.onSurfaceVariant),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

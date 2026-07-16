@@ -14,6 +14,11 @@ class BloodRequestModel {
   final String? paymentReference;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final String? fulfillmentType;
+  final int? donorId;
+  final String? donorName;
+  final String? donorPhone;
+  final String? donorEmail;
 
   BloodRequestModel({
     required this.id,
@@ -31,6 +36,11 @@ class BloodRequestModel {
     this.paymentReference,
     required this.createdAt,
     this.updatedAt,
+    this.fulfillmentType,
+    this.donorId,
+    this.donorName,
+    this.donorPhone,
+    this.donorEmail,
   });
 
   factory BloodRequestModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +62,11 @@ class BloodRequestModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      fulfillmentType: json['fulfillment_type'] as String?,
+      donorId: json['donor'] as int?,
+      donorName: json['donor_name'] as String?,
+      donorPhone: json['donor_phone'] as String?,
+      donorEmail: json['donor_email'] as String?,
     );
   }
 
@@ -68,6 +83,8 @@ class BloodRequestModel {
       'reason': reason,
       'payment_status': paymentStatus,
       'payment_reference': paymentReference,
+      'fulfillment_type': fulfillmentType,
+      'donor': donorId,
     };
   }
 }

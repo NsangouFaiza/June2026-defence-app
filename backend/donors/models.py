@@ -42,7 +42,7 @@ class Donor(models.Model):
     def update_eligibility(self):
         if self.last_donation_date:
             from datetime import timedelta
-            next_date = self.last_donation_date + timedelta(days=90)
+            next_date = self.last_donation_date + timedelta(days=60)
             self.next_eligible_date = next_date
             self.is_eligible = timezone.now().date() >= next_date
         self.save()
