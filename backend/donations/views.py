@@ -16,7 +16,7 @@ class DonationViewSet(viewsets.ModelViewSet):
     search_fields = ['donor__user__first_name', 'donor__user__last_name', 'hospital__name']
 
     def perform_create(self, serializer):
-        if self.request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        if self.request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only lab technicians and administrators can record donations.')
         serializer.save(screened_by=self.request.user)
@@ -48,7 +48,7 @@ class DonationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def record_screening(self, request, pk=None):
         """Lab technician records screening results."""
-        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         donation = self.get_object()
@@ -63,7 +63,7 @@ class DonationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def verify(self, request, pk=None):
         """Verify donation (sets is_usable to True, status to COMPLETED)."""
-        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         donation = self.get_object()
@@ -77,7 +77,7 @@ class DonationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def record_donation(self, request):
         """Lab technician records a new donation from a completed appointment."""
-        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.get_serializer(data=request.data)

@@ -12,7 +12,7 @@ class IsStaffOrTechnicianOrAdmin(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and (
-            request.user.role in ('lab_technician', 'hospital_staff', 'blood_bank_admin', 'system_admin')
+            request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin')
             or request.user.is_staff
         )
 
@@ -75,8 +75,8 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def approve_unit(self, request, pk=None):
-        """Lab technician approves a blood unit for inventory."""
-        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        """Staff or admin approves a blood unit for inventory."""
+        if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         unit = self.get_object()
@@ -86,11 +86,89 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reject_unit(self, request, pk=None):
-        """Lab technician rejects a blood unit."""
-        if request.user.role not in ('lab_technician', 'blood_bank_admin', 'system_admin'):
+        """Staff or admin rejects a blood unit."""
+        if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         unit = self.get_object()
         unit.status = 'rejected'
         unit.save()
         return Response(self.get_serializer(unit).data)
+
+
+from .models import LabTestRecord
+from .serializers import LabTestRecordSerializer
+
+class LabTestRecordViewSet(viewsets.ModelViewSet):
+    """ViewSet for LabTestRecord model."""
+
+    queryset = LabTestRecord.objects.all()
+    serializer_class = LabTestRecordSerializer
+    permission_classes = [IsStaffOrTechnicianOrAdmin]
+    filterset_fields = ['donor', 'blood_group', 'unit_status', 'has_abnormal_findings']
+    search_fields = ['sample_code', 'donor__user__full_name', 'abnormal_findings']
+
+    def perform_create(self, serializer):
+        serializer.save(tested_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve lab record & update inventory unit status to available."""
+        lab_record = self.get_object()
+        lab_record.unit_status = 'APPROVED'
+        lab_record.save()
+
+        if lab_record.inventory_unit:
+            unit = lab_record.inventory_unit
+            unit.status = 'available'
+            unit.save()
+
+        serializer = self.get_serializer(lab_record)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject lab record & update inventory unit status to rejected."""
+        lab_record = self.get_object()
+        reason = request.data.get('reason', '')
+        lab_record.unit_status = 'REJECTED'
+        if reason:
+            lab_record.abnormal_findings = f"{lab_record.abnormal_findings}\nRejection note: {reason}".strip()
+            lab_record.has_abnormal_findings = True
+        lab_record.save()
+
+        if lab_record.inventory_unit:
+            unit = lab_record.inventory_unit
+            unit.status = 'rejected'
+            unit.save()
+
+        serializer = self.get_serializer(lab_record)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def report_abnormal(self, request, pk=None):
+        """Report abnormal finding for a sample."""
+        lab_record = self.get_object()
+        findings = request.data.get('abnormal_findings', '')
+        unit_status = request.data.get('unit_status', 'QUARANTINED')
+
+        lab_record.has_abnormal_findings = True
+        lab_record.abnormal_findings = findings
+        lab_record.unit_status = unit_status
+        lab_record.save()
+
+        if lab_record.inventory_unit and unit_status in ('REJECTED', 'QUARANTINED'):
+            unit = lab_record.inventory_unit
+            unit.status = 'rejected' if unit_status == 'REJECTED' else 'reserved'
+            unit.save()
+
+        serializer = self.get_serializer(lab_record)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my_tests(self, request):
+        """Get lab tests conducted by current technician."""
+        records = LabTestRecord.objects.filter(tested_by=request.user)
+        serializer = self.get_serializer(records, many=True)
+        return Response(serializer.data)
+

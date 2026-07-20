@@ -41,6 +41,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
       context: context,
       builder: (context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
           title: const Text('Edit Hospital Details'),
           content: SingleChildScrollView(
             child: Form(
@@ -53,27 +54,33 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                     decoration: const InputDecoration(labelText: 'Hospital Name'),
                     validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: descriptionController,
                     decoration: const InputDecoration(labelText: 'Description'),
                     maxLines: 2,
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: addressController,
                     decoration: const InputDecoration(labelText: 'Address'),
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: cityController,
                     decoration: const InputDecoration(labelText: 'City'),
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: regionController,
                     decoration: const InputDecoration(labelText: 'Region'),
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: phoneController,
                     decoration: const InputDecoration(labelText: 'Phone Number'),
                   ),
+                  SizedBox(height: 8.h),
                   TextFormField(
                     controller: emailController,
                     decoration: const InputDecoration(labelText: 'Email'),
@@ -107,10 +114,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   });
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Hospital details updated successfully')),
+                    const SnackBar(content: Text('Hospital details updated successfully'), backgroundColor: AppTheme.success),
                   );
                 }
               },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
               child: const Text('Save'),
             ),
           ],
@@ -126,7 +134,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
     final user = userAsync.value;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: FutureBuilder<HospitalModel?>(
         future: _hospitalFuture,
         builder: (context, snapshot) {
@@ -134,19 +142,19 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError && !_isInitialized) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error loading hospital profile: ${snapshot.error}'));
           }
 
           if (!_isInitialized) {
             _hospital = snapshot.data ?? HospitalModel(
               id: 1,
-              name: 'Central Hospital',
-              address: '123 Main Street, City Centre',
+              name: 'Central Hospital Yaoundé',
+              address: 'Avenue Kennedy, Yaoundé',
               city: 'Yaounde',
               region: 'Centre',
-              phoneNumber: '+237 600 000 000',
+              phoneNumber: '+237 222 000 000',
               email: 'contact@centralhospital.org',
-              description: 'Main medical facility and blood bank coordination center.',
+              description: 'Main regional hospital and blood bank coordination center.',
               isActive: true,
             );
             _isInitialized = true;
@@ -156,10 +164,10 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
 
           return CustomScrollView(
             slivers: [
-              // Header
+              // Header Banner
               SliverToBoxAdapter(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -178,12 +186,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                     bottom: false,
                     child: Row(
                       children: [
-                        // Hospital Icon
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
                           child: Container(
-                            width: 56.w,
-                            height: 56.w,
+                            width: 54.w,
+                            height: 54.w,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
@@ -200,7 +207,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                             ),
                           ),
                         ),
-                        SizedBox(width: 16.w),
+                        SizedBox(width: 14.w),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,13 +215,13 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                               Text(
                                 user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 13.sp,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
-                                'Hospital Dashboard - ${hospital.name}',
+                                hospital.name,
                                 style: TextStyle(
                                   fontSize: 18.sp,
                                   fontWeight: FontWeight.bold,
@@ -225,49 +232,50 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                             ],
                           ),
                         ),
-                        // Notification Icon
-                        Container(
-                          width: 48.w,
-                          height: 48.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 24.w,
-                              ),
-                              Positioned(
-                                top: 8.w,
-                                right: 8.w,
-                                child: Container(
-                                  width: 8.w,
-                                  height: 8.w,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/notifications'),
+                          child: Container(
+                            width: 42.w,
+                            height: 42.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 22.w,
+                                ),
+                                Positioned(
+                                  top: 8.w,
+                                  right: 8.w,
+                                  child: Container(
+                                    width: 8.w,
+                                    height: 8.w,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         SizedBox(width: 8.w),
-                        // Logout Button
                         Container(
-                          width: 48.w,
-                          height: 48.w,
+                          width: 42.w,
+                          height: 42.w,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
                             icon: const Icon(
-                              Icons.logout,
+                              Icons.logout_rounded,
                               color: Colors.white,
                             ),
                             iconSize: 20.w,
@@ -285,20 +293,20 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              
-              // Hospital Info Card
+              SliverToBoxAdapter(child: SizedBox(height: 20.h)),
+
+              // Hospital Details Card
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Container(
-                    padding: EdgeInsets.all(16.w),
+                    padding: EdgeInsets.all(18.w),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20.r),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -309,7 +317,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.local_hospital, color: AppTheme.primaryColor, size: 24.w),
+                            Icon(Icons.local_hospital_rounded, color: AppTheme.primaryColor, size: 24.w),
                             SizedBox(width: 8.w),
                             Expanded(
                               child: Text(
@@ -335,11 +343,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                           Text(
                             hospital.description!,
                             style: TextStyle(
-                              fontSize: 13.sp,
+                              fontSize: 12.sp,
                               color: AppTheme.onSurfaceVariant,
                             ),
                           ),
-                          SizedBox(height: 12.h),
+                          SizedBox(height: 10.h),
                         ],
                         Row(
                           children: [
@@ -359,18 +367,18 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                             ),
                           ],
                         ),
-                        SizedBox(height: 8.h),
+                        SizedBox(height: 6.h),
                         Wrap(
                           spacing: 16.w,
-                          runSpacing: 8.h,
+                          runSpacing: 6.h,
                           children: [
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.phone_outlined, color: Colors.grey, size: 16.w),
-                                SizedBox(width: 8.w),
+                                SizedBox(width: 6.w),
                                 Text(
-                                  hospital.phoneNumber ?? 'No phone contact',
+                                  hospital.phoneNumber ?? 'No phone',
                                   style: TextStyle(
                                     fontSize: 12.sp,
                                     color: AppTheme.onSurfaceVariant,
@@ -382,10 +390,10 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.email_outlined, color: Colors.grey, size: 16.w),
-                                SizedBox(width: 8.w),
+                                SizedBox(width: 6.w),
                                 Flexible(
                                   child: Text(
-                                    hospital.email ?? 'No email contact',
+                                    hospital.email ?? 'No email',
                                     style: TextStyle(
                                       fontSize: 12.sp,
                                       color: AppTheme.onSurfaceVariant,
@@ -403,11 +411,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                 ),
               ),
               SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              
-              // Blood Inventory Cards
+
+              // Blood Stock Overview (8 Groups)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -415,27 +423,27 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Blood Inventory',
+                            'Blood Bank Inventory',
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.onSurface,
                             ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pushNamed('/blood-inventory'),
-                            child: Text('View All'),
+                            child: const Text('View All'),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: 4,
-                        mainAxisSpacing: 12.w,
-                        crossAxisSpacing: 12.w,
-                        childAspectRatio: 0.8,
+                        mainAxisSpacing: 10.w,
+                        crossAxisSpacing: 10.w,
+                        childAspectRatio: 0.85,
                         children: [
                           _buildBloodGroupCard('A+', 45, AppTheme.success),
                           _buildBloodGroupCard('A-', 23, AppTheme.warning),
@@ -451,67 +459,88 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Quick Actions
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Responsive 2-Column Grid of Large Clickable Icon Cards
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quick Actions',
+                        'STAFF MANAGEMENT CENTER',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: 2,
-                        mainAxisSpacing: 12.w,
-                        crossAxisSpacing: 12.w,
+                        mainAxisSpacing: 14.h,
+                        crossAxisSpacing: 14.w,
                         childAspectRatio: 1.1,
                         children: [
                           _buildActionCard(
-                            'Update Inventory',
-                            Icons.inventory_2,
-                            AppTheme.primaryColor,
-                            () => Navigator.of(context).pushNamed('/blood-inventory'),
+                            title: 'Update Inventory',
+                            description: 'Manage blood stock & expiration dates',
+                            icon: Icons.inventory_2_rounded,
+                            gradient: const [Color(0xFFE53935), Color(0xFFC62828)],
+                            onTap: () => Navigator.of(context).pushNamed('/blood-inventory'),
                           ),
                           _buildActionCard(
-                            'Manage Requests',
-                            Icons.assignment,
-                            AppTheme.success,
-                            () => Navigator.of(context).pushNamed('/blood-requests'),
+                            title: 'Manage Requests',
+                            description: 'Approve or fulfill patient blood needs',
+                            icon: Icons.assignment_rounded,
+                            gradient: const [Color(0xFF43A047), Color(0xFF2E7D32)],
+                            onTap: () => Navigator.of(context).pushNamed('/blood-requests'),
                           ),
                           _buildActionCard(
-                            'Contact Donors',
-                            Icons.people,
-                            AppTheme.accentColor,
-                            () => Navigator.of(context).pushNamed('/donor-list'),
+                            title: 'Contact Donors',
+                            description: 'Search & reach out to local donors',
+                            icon: Icons.people_rounded,
+                            gradient: const [Color(0xFF1E88E5), Color(0xFF1565C0)],
+                            onTap: () => Navigator.of(context).pushNamed('/donor-list'),
                           ),
                           _buildActionCard(
-                            'Manage Appointments',
-                            Icons.event,
-                            Colors.indigo,
-                            () => Navigator.of(context).pushNamed('/manage-appointments'),
+                            title: 'Appointments',
+                            description: 'Schedule & confirm donation visits',
+                            icon: Icons.calendar_month_rounded,
+                            gradient: const [Color(0xFF3F51B5), Color(0xFF303F9F)],
+                            onTap: () => Navigator.of(context).pushNamed('/manage-appointments'),
                           ),
                           _buildActionCard(
-                            'Send Alerts',
-                            Icons.notifications_active,
-                            Colors.orange,
-                            () => Navigator.of(context).pushNamed('/manage-appointments'),
+                            title: 'Send Alerts',
+                            description: 'Broadcast urgent shortage alerts',
+                            icon: Icons.notifications_active_rounded,
+                            gradient: const [Color(0xFFFF9800), Color(0xFFF57C00)],
+                            onTap: () => Navigator.of(context).pushNamed('/manage-appointments'),
                           ),
                           _buildActionCard(
-                            'Reports',
-                            Icons.analytics,
-                            Colors.purple,
-                            () => Navigator.of(context).pushNamed('/reports'),
+                            title: 'Reports & Analytics',
+                            description: 'View blood usage & supply trends',
+                            icon: Icons.analytics_rounded,
+                            gradient: const [Color(0xFF8E24AA), Color(0xFF6A1B9A)],
+                            onTap: () => Navigator.of(context).pushNamed('/reports'),
+                          ),
+                          _buildActionCard(
+                            title: 'Blood Campaigns',
+                            description: 'Organize & promote donation drives',
+                            icon: Icons.campaign_rounded,
+                            gradient: const [Color(0xFF00ACC1), Color(0xFF00838F)],
+                            onTap: () => Navigator.of(context).pushNamed('/campaigns'),
+                          ),
+                          _buildActionCard(
+                            title: 'Lab Control Center',
+                            description: 'Full lab testing, sample analysis & screening portal',
+                            icon: Icons.biotech_rounded,
+                            gradient: const [Color(0xFF00B4DB), Color(0xFF0083B0)],
+                            onTap: () => Navigator.of(context).pushNamed('/lab-dashboard'),
                           ),
                         ],
                       ),
@@ -519,44 +548,44 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Analytics Section
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Analytics Summary Section
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Analytics',
+                        'Weekly Performance & Analytics',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.onSurface,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       _buildAnalyticsCard(
                         'Daily Requests',
                         '24 requests today',
-                        Icons.trending_up,
+                        Icons.trending_up_rounded,
                         AppTheme.primaryColor,
                         '+12%',
                       ),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 10.h),
                       _buildAnalyticsCard(
                         'Blood Usage',
-                        '156 units this week',
-                        Icons.water_drop,
+                        '156 units issued this week',
+                        Icons.water_drop_rounded,
                         AppTheme.accentColor,
                         '+8%',
                       ),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 10.h),
                       _buildAnalyticsCard(
-                        'Inventory Trends',
-                        'Stable levels',
-                        Icons.show_chart,
+                        'Inventory Reserves',
+                        'Optimal stock levels maintained',
+                        Icons.show_chart_rounded,
                         AppTheme.success,
                         '+2%',
                       ),
@@ -564,7 +593,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+              SliverToBoxAdapter(child: SizedBox(height: 80.h)),
             ],
           );
         },
@@ -574,14 +603,14 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
 
   Widget _buildBloodGroupCard(String bloodGroup, int units, Color statusColor) {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -592,28 +621,28 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 40.w,
-              height: 40.w,
+              width: 36.w,
+              height: 36.w,
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Text(
                   bloodGroup,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
                   ),
                 ),
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 6.h),
             Text(
               '$units',
               style: TextStyle(
-                fontSize: 18.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.onSurface,
               ),
@@ -621,17 +650,8 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
             Text(
               'units',
               style: TextStyle(
-                fontSize: 10.sp,
+                fontSize: 9.sp,
                 color: AppTheme.onSurfaceVariant,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Container(
-              width: 8.w,
-              height: 8.w,
-              decoration: BoxDecoration(
-                color: statusColor,
-                shape: BoxShape.circle,
               ),
             ),
           ],
@@ -640,50 +660,71 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
     );
   }
 
-  Widget _buildActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+  Widget _buildActionCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.first.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 56.w,
-                height: 56.w,
+                padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16.r),
+                  color: Colors.white.withOpacity(0.25),
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 28.w),
+                child: Icon(icon, color: Colors.white, size: 26.w),
               ),
-              SizedBox(height: 12.h),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.onSurface,
-                ),
-                textAlign: TextAlign.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -700,13 +741,13 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
     String trend,
   ) {
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -715,15 +756,15 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
       child: Row(
         children: [
           Container(
-            width: 48.w,
-            height: 48.w,
+            width: 44.w,
+            height: 44.w,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Icon(icon, color: color, size: 24.w),
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,15 +773,15 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                   title,
                   style: TextStyle(
                     fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     color: AppTheme.onSurface,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 11.sp,
                     color: AppTheme.onSurfaceVariant,
                   ),
                 ),
@@ -748,15 +789,15 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
             ),
           ),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: AppTheme.success.withOpacity(0.1),
+              color: AppTheme.success.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Text(
               trend,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 11.sp,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.success,
               ),

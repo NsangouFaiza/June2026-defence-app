@@ -37,7 +37,11 @@ class Donor(models.Model):
         ]
 
     def __str__(self):
-        return self.user.full_name
+        return f"{self.donor_code} - {self.user.full_name}"
+
+    @property
+    def donor_code(self):
+        return f"DON-2026-{self.id:04d}"
 
     def update_eligibility(self):
         if self.last_donation_date:
@@ -46,3 +50,27 @@ class Donor(models.Model):
             self.next_eligible_date = next_date
             self.is_eligible = timezone.now().date() >= next_date
         self.save()
+
+
+class DonorHealthRecord(models.Model):
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name='health_records')
+    recorded_at = models.DateTimeField(default=timezone.now)
+    hemoglobin = models.FloatField(null=True, blank=True, help_text='Hemoglobin level in g/dL')
+    systolic_bp = models.IntegerField(null=True, blank=True, help_text='Systolic BP in mmHg')
+    diastolic_bp = models.IntegerField(null=True, blank=True, help_text='Diastolic BP in mmHg')
+    pulse_rate = models.IntegerField(null=True, blank=True, help_text='Pulse rate in bpm')
+    weight_kg = models.FloatField(null=True, blank=True, help_text='Weight in kg')
+    temperature_c = models.FloatField(null=True, blank=True, help_text='Temperature in Celsius')
+    screening_result = models.CharField(max_length=20, default='PASSED', choices=[
+        ('PASSED', 'Passed / Normal'),
+        ('ATTENTION', 'Attention Needed'),
+        ('FAILED', 'Deferred'),
+    ])
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-recorded_at']
+
+    def __str__(self):
+        return f"Health Record - {self.donor.user.full_name} ({self.recorded_at.date()})"
+

@@ -101,7 +101,6 @@ class AppConstants {
     'donor',
     'patient',
     'hospital_staff',
-    'lab_technician',
     'blood_bank_admin',
     'system_admin',
   ];

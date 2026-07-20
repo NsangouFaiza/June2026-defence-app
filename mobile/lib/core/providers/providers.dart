@@ -18,8 +18,9 @@ import '../../data/repositories/admin_repository.dart';
 import '../../data/repositories/community_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/donor_repository.dart';
+import '../../data/repositories/health_record_repository.dart';
+import '../../data/repositories/lab_repository.dart';
 import '../../core/utils/localization_service.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
@@ -27,6 +28,12 @@ final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async 
 });
 
 // Repository Providers
+final labRepositoryProvider = Provider<LabRepository>((ref) {
+  return LabRepository();
+});
+final healthRecordRepositoryProvider = Provider<HealthRecordRepository>((ref) {
+  return HealthRecordRepository();
+});
 final hospitalRepositoryProvider = Provider<HospitalRepository>((ref) {
   return HospitalRepository();
 });

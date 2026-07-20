@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/theme/app_theme.dart';
@@ -37,7 +38,8 @@ class DigitalDonorCardScreen extends ConsumerWidget {
           }
 
           final donor = snapshot.data!;
-          final qrData = "LIFELINK-DONOR-ID:${donor.id}-${user?.fullName ?? 'Unknown'}";
+          final donorIdCode = donor.donorIdCode;
+          final qrData = "LIFELINK-DONOR-ID:${donor.donorIdCode}-${user?.fullName ?? 'Unknown'}";
 
           return SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
@@ -51,7 +53,7 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Present this QR code when checking in for a donation.',
+                  'Present this digital card or QR code when checking in for a donation.',
                   style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
@@ -92,7 +94,7 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                             color: Colors.amber.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(8.r),
                           ),
-                          child: const Icon(Icons.credit_card, color: Colors.white24),
+                          child: const Icon(Icons.credit_card, color: Colors.white30),
                         ),
                       ),
                       // Blood Type badge
@@ -146,7 +148,7 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                                       style: TextStyle(fontSize: 9.sp, color: Colors.white70),
                                     ),
                                     Text(
-                                      'LL-${donor.id.toString().padLeft(6, '0')}',
+                                      donorIdCode,
                                       style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold, color: Colors.white),
                                     ),
                                   ],
@@ -185,7 +187,45 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                SizedBox(height: 32.h),
+                SizedBox(height: 24.h),
+
+                // Action buttons: Copy & Share Card
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: donorIdCode));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Donor ID copied to clipboard!')),
+                          );
+                        },
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Copy ID'),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Sharing donor card for ${user?.fullName}...'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.share),
+                        label: const Text('Share Card'),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.h),
 
                 // QR CODE SCANNER CHECKIN
                 Card(
@@ -196,11 +236,10 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         Text(
-                          'Quick Check-In QR',
+                          'Hospital Check-In QR',
                           style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 16.h),
-                        // Mock QR code design using standard custom paint or canvas
                         Container(
                           width: 180.w,
                           height: 180.w,
@@ -217,9 +256,9 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                         ),
                         SizedBox(height: 16.h),
                         Text(
-                          'LL-${donor.id}',
+                          donorIdCode,
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.onSurfaceVariant,
                             letterSpacing: 2,
@@ -229,6 +268,7 @@ class DigitalDonorCardScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                SizedBox(height: 32.h),
               ],
             ),
           );
@@ -238,7 +278,6 @@ class DigitalDonorCardScreen extends ConsumerWidget {
   }
 }
 
-// Custom QRCode mock painter for beautiful retro look
 class QRCodePainter extends CustomPainter {
   final String data;
   QRCodePainter(this.data);
@@ -246,10 +285,9 @@ class QRCodePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black85
+      ..color = Colors.black87
       ..style = PaintingStyle.fill;
 
-    // Outer corner anchors
     double markerSize = size.width * 0.25;
     
     // Top-Left Anchor
@@ -267,15 +305,12 @@ class QRCodePainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(2, size.height - markerSize + 2, markerSize - 4, markerSize - 4), Paint()..color = Colors.white);
     canvas.drawRect(Rect.fromLTWH(6, size.height - markerSize + 6, markerSize - 12, markerSize - 12), paint);
 
-    // Draw some random barcode-like modules
     for (int i = 0; i < 15; i++) {
       for (int j = 0; j < 15; j++) {
-        // Skip corner anchor areas
         if (i < 5 && j < 5) continue;
         if (i > 9 && j < 5) continue;
         if (i < 5 && j > 9) continue;
 
-        // Deterministic hash based on character codes
         int hash = (i * 37 + j * 17 + data.hashCode) % 5;
         if (hash == 0 || hash == 2) {
           canvas.drawRect(

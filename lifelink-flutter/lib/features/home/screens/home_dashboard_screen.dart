@@ -224,30 +224,6 @@ class HomeDashboardScreen extends ConsumerWidget {
           () => Navigator.of(context).pushNamed('/hospital-locator'),
         ),
       ]);
-    } else if (role == 'lab_technician') {
-      actions.addAll([
-        _buildActionCard(
-          context,
-          'Lab Dashboard',
-          Icons.science,
-          AppTheme.primaryColor,
-          () => Navigator.of(context).pushNamed('/lab-dashboard'),
-        ),
-        _buildActionCard(
-          context,
-          localization.translate('blood_inventory'),
-          Icons.inventory,
-          AppTheme.success,
-          () => Navigator.of(context).pushNamed('/blood-inventory'),
-        ),
-        _buildActionCard(
-          context,
-          localization.translate('donation_history'),
-          Icons.bloodtype,
-          AppTheme.warning,
-          () => Navigator.of(context).pushNamed('/donation-history'),
-        ),
-      ]);
     } else if (role == 'hospital_staff') {
       actions.addAll([
         _buildActionCard(

@@ -283,3 +283,49 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
         blood_request.save()
         serializer = self.get_serializer(blood_request)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def pledge(self, request, pk=None):
+        """Pledge to donate for a blood request (Donor)."""
+        blood_request = self.get_object()
+        from donors.models import Donor
+        try:
+            donor = Donor.objects.get(user=request.user)
+        except Donor.DoesNotExist:
+            return Response({'error': 'Donor profile required to pledge.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        blood_request.donor = donor
+        if blood_request.status == 'PENDING':
+            blood_request.status = 'APPROVED'
+            blood_request.fulfillment_type = 'DIRECT_DONATION'
+        blood_request.save()
+        serializer = self.get_serializer(blood_request)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my_pledges(self, request):
+        """Get requests pledged by current donor."""
+        from donors.models import Donor
+        try:
+            donor = Donor.objects.get(user=request.user)
+            queryset = BloodRequest.objects.filter(donor=donor)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        except Donor.DoesNotExist:
+            return Response([])
+
+    @action(detail=True, methods=['post'])
+    def cancel_pledge(self, request, pk=None):
+        """Cancel donor's pledge on a blood request."""
+        blood_request = self.get_object()
+        from donors.models import Donor
+        try:
+            donor = Donor.objects.get(user=request.user)
+            if blood_request.donor == donor:
+                blood_request.donor = None
+                blood_request.save()
+        except Donor.DoesNotExist:
+            pass
+        serializer = self.get_serializer(blood_request)
+        return Response(serializer.data)
+

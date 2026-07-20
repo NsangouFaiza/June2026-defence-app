@@ -49,7 +49,6 @@ class User(AbstractUser):
         ('donor', 'Donor'),
         ('patient', 'Patient'),
         ('hospital_staff', 'Hospital Staff'),
-        ('lab_technician', 'Laboratory Technician'),
         ('blood_bank_admin', 'Blood Bank Administrator'),
         ('system_admin', 'System Administrator'),
     ]

@@ -107,7 +107,7 @@ class DonorListScreen extends ConsumerWidget {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${donor.region}, ${donor.city}'),
+                            Text('${donor.donorIdCode} • ${donor.region}, ${donor.city}', style: const TextStyle(fontWeight: FontWeight.bold)),
                             Row(
                               children: [
                                 Icon(

@@ -22,7 +22,7 @@ class IsStaffOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and (
             request.user.is_staff
-            or request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin', 'lab_technician')
+            or request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin')
         )
 
 

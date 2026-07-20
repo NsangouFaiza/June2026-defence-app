@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Donor
-from .serializers import DonorSerializer, DonorDetailSerializer
+from .models import Donor, DonorHealthRecord
+from .serializers import DonorSerializer, DonorDetailSerializer, DonorHealthRecordSerializer
 
 
 class DonorViewSet(viewsets.ModelViewSet):
@@ -150,3 +150,27 @@ class DonorViewSet(viewsets.ModelViewSet):
         donor.save()
         serializer = self.get_serializer(donor)
         return Response(serializer.data)
+
+
+class DonorHealthRecordViewSet(viewsets.ModelViewSet):
+    """ViewSet for DonorHealthRecord model."""
+
+    queryset = DonorHealthRecord.objects.all()
+    serializer_class = DonorHealthRecordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        donor, _ = Donor.objects.get_or_create(user=self.request.user)
+        serializer.save(donor=donor)
+
+    @action(detail=False, methods=['get'])
+    def my_records(self, request):
+        """Get current donor's health records."""
+        try:
+            donor = Donor.objects.get(user=request.user)
+            records = DonorHealthRecord.objects.filter(donor=donor)
+            serializer = self.get_serializer(records, many=True)
+            return Response(serializer.data)
+        except Donor.DoesNotExist:
+            return Response([])
+

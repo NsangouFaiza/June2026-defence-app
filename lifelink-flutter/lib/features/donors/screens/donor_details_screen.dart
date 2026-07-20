@@ -269,7 +269,23 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
                         donor.fullName,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 6.h),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          'Donor ID: ${donor.donorIdCode}',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
                       Text(
                         donor.bloodGroup ?? 'O+',
                         style: TextStyle(

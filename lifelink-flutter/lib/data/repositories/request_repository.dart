@@ -103,4 +103,33 @@ class RequestRepository {
       throw Exception('Failed to fulfill request: $e');
     }
   }
+
+  Future<BloodRequestModel> pledgeToRequest(int id) async {
+    try {
+      final response = await _apiService.post('/requests/$id/pledge/');
+      return BloodRequestModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to pledge to request: $e');
+    }
+  }
+
+  Future<List<BloodRequestModel>> getMyPledges() async {
+    try {
+      final response = await _apiService.get('/requests/my_pledges/');
+      return (response.data as List)
+          .map((json) => BloodRequestModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to load pledges: $e');
+    }
+  }
+
+  Future<BloodRequestModel> cancelPledge(int id) async {
+    try {
+      final response = await _apiService.post('/requests/$id/cancel_pledge/');
+      return BloodRequestModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to cancel pledge: $e');
+    }
+  }
 }

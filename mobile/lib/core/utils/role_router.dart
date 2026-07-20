@@ -7,8 +7,6 @@ String getDashboardRouteForRole(String role) {
     case 'hospital_staff':
     case 'blood_bank_staff':
       return '/hospital-dashboard';
-    case 'lab_technician':
-      return '/lab-dashboard';
     case 'system_admin':
     case 'blood_bank_admin':
       return '/admin-panel';

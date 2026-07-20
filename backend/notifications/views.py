@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -55,7 +56,7 @@ class IsStaffOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and (
             request.user.is_staff
-            or request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin', 'lab_technician')
+            or request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin')
         )
 
 

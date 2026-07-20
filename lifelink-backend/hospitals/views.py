@@ -15,8 +15,8 @@ class HospitalViewSet(viewsets.ModelViewSet):
     queryset = Hospital.objects.all()
     serializer_class = HospitalSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['region', 'city', 'is_active']
-    search_fields = ['name', 'address', 'city', 'region']
+    filterset_fields = ['region', 'city', 'is_active', 'has_blood_bank', 'has_emergency_services']
+    search_fields = ['name', 'address', 'city', 'region', 'description', 'services']
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

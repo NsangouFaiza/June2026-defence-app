@@ -19,6 +19,49 @@ class BloodRequestsListScreen extends ConsumerStatefulWidget {
 class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScreen> {
   bool _isActionLoading = false;
 
+  Future<void> _handlePledge(int id) async {
+    setState(() => _isActionLoading = true);
+    try {
+      await ref.read(requestRepositoryProvider).pledgeToRequest(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thank you! You have pledged to donate for this emergency request.'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pledge: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _handleCancelPledge(int id) async {
+    setState(() => _isActionLoading = true);
+    try {
+      await ref.read(requestRepositoryProvider).cancelPledge(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pledge cancelled.'), backgroundColor: AppTheme.warning),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to cancel pledge: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
   Future<void> _handleApprove(int id) async {
     final localization = ref.read(localizationServiceProvider);
     
@@ -807,24 +850,25 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
             ),
           ],
 
-          // Donor Donate Action
+          // Donor Donate / Pledge Action
           if (showDonateAction) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Expanded(
                   child: Text(
-                    'Need matching blood donors nearby!',
-                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                    'Urgent Emergency Blood Request',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/book-appointment');
-                  },
-                  icon: const Icon(Icons.favorite, size: 16),
-                  label: const Text('Donate Now'),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+                  onPressed: () => _handlePledge(request.id),
+                  icon: const Icon(Icons.volunteer_activism, size: 16),
+                  label: const Text('Pledge to Donate'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ],
             ),

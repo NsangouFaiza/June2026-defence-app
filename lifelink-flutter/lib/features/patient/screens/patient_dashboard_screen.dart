@@ -22,7 +22,7 @@ class PatientDashboardScreen extends ConsumerWidget {
     final user = userAsync.value;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: FutureBuilder<List<dynamic>>(
         future: Future.wait([
           requestRepo.getMyRequests().catchError((_) => <BloodRequestModel>[]),
@@ -35,7 +35,7 @@ class PatientDashboardScreen extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error loading dashboard: ${snapshot.error}'));
           }
 
           final results = snapshot.data ?? [[], [], [], []];
@@ -50,10 +50,10 @@ class PatientDashboardScreen extends ConsumerWidget {
 
           return CustomScrollView(
             slivers: [
-              // Header
+              // Header Banner
               SliverToBoxAdapter(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -76,8 +76,8 @@ class PatientDashboardScreen extends ConsumerWidget {
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
                           child: Container(
-                            width: 56.w,
-                            height: 56.w,
+                            width: 54.w,
+                            height: 54.w,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
@@ -90,7 +90,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        SizedBox(width: 16.w),
+                        SizedBox(width: 14.w),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +98,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                               Text(
                                 user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 13.sp,
                                   color: Colors.white.withOpacity(0.9),
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -113,17 +113,17 @@ class PatientDashboardScreen extends ConsumerWidget {
                                     padding: EdgeInsets.all(4.w),
                                     child: Image.asset(
                                       'assets/images/logo.png',
-                                      height: 24.w,
-                                      width: 24.w,
+                                      height: 20.w,
+                                      width: 20.w,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
                                   Expanded(
                                     child: Text(
-                                      'Patient Dashboard',
+                                      'Patient Care Hub',
                                       style: TextStyle(
-                                        fontSize: 20.sp,
+                                        fontSize: 18.sp,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -136,34 +136,37 @@ class PatientDashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         // Notification Icon
-                        Container(
-                          width: 48.w,
-                          height: 48.w,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 24.w,
-                              ),
-                              Positioned(
-                                top: 8.w,
-                                right: 8.w,
-                                child: Container(
-                                  width: 8.w,
-                                  height: 8.w,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/notifications'),
+                          child: Container(
+                            width: 42.w,
+                            height: 42.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 22.w,
+                                ),
+                                Positioned(
+                                  top: 8.w,
+                                  right: 8.w,
+                                  child: Container(
+                                    width: 8.w,
+                                    height: 8.w,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -171,31 +174,32 @@ class PatientDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              
-              // Statistics Cards
+              SliverToBoxAdapter(child: SizedBox(height: 20.h)),
+
+              // Live Statistics Overview
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Statistics',
+                        'BLOOD SUPPLY & NETWORK STATUS',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       Row(
                         children: [
                           Expanded(
                             child: _buildStatCard(
                               totalBloodPacks.toString(),
-                              'Available Blood Packs',
-                              Icons.bloodtype,
+                              'Available Blood Units',
+                              Icons.bloodtype_rounded,
                               AppTheme.primaryColor,
                               onTap: () => Navigator.of(context).pushNamed('/available-blood-packs'),
                             ),
@@ -204,8 +208,8 @@ class PatientDashboardScreen extends ConsumerWidget {
                           Expanded(
                             child: _buildStatCard(
                               nearbyHospitals.toString(),
-                              'Nearby Hospitals',
-                              Icons.local_hospital,
+                              'Hospitals & Banks',
+                              Icons.local_hospital_rounded,
                               AppTheme.accentColor,
                               onTap: () => Navigator.of(context).pushNamed('/hospital-locator'),
                             ),
@@ -215,8 +219,8 @@ class PatientDashboardScreen extends ConsumerWidget {
                       SizedBox(height: 12.h),
                       _buildStatCard(
                         activeDonors.toString(),
-                        'Active Donors',
-                        Icons.people,
+                        'Registered Active Donors Nearby',
+                        Icons.people_rounded,
                         AppTheme.success,
                         onTap: () => Navigator.of(context).pushNamed('/donor-list'),
                       ),
@@ -224,67 +228,88 @@ class PatientDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Quick Actions
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Responsive 2-Column Grid of Large Clickable Icon Cards
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quick Actions',
+                        'PATIENT SERVICES & ACTIONS',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: 2,
-                        mainAxisSpacing: 12.w,
-                        crossAxisSpacing: 12.w,
+                        mainAxisSpacing: 14.h,
+                        crossAxisSpacing: 14.w,
                         childAspectRatio: 1.1,
                         children: [
                           _buildActionCard(
-                            'Request Blood',
-                            Icons.bloodtype,
-                            AppTheme.primaryColor,
-                            () => Navigator.of(context).pushNamed('/blood-request'),
+                            title: 'Request Blood',
+                            description: 'Submit a new request for blood units',
+                            icon: Icons.bloodtype_rounded,
+                            gradient: const [Color(0xFFE53935), Color(0xFFC62828)],
+                            onTap: () => Navigator.of(context).pushNamed('/blood-request'),
                           ),
                           _buildActionCard(
-                            'Find Hospitals',
-                            Icons.local_hospital,
-                            AppTheme.accentColor,
-                            () => Navigator.of(context).pushNamed('/hospital-locator'),
+                            title: 'Find Hospitals',
+                            description: 'Locate blood banks & hospital map',
+                            icon: Icons.local_hospital_rounded,
+                            gradient: const [Color(0xFF1E88E5), Color(0xFF1565C0)],
+                            onTap: () => Navigator.of(context).pushNamed('/hospital-locator'),
                           ),
                           _buildActionCard(
-                            'Contact Donors',
-                            Icons.people,
-                            AppTheme.success,
-                            () => Navigator.of(context).pushNamed('/donor-list'),
+                            title: 'Contact Donors',
+                            description: 'Browse & connect with compatible donors',
+                            icon: Icons.people_rounded,
+                            gradient: const [Color(0xFF43A047), Color(0xFF2E7D32)],
+                            onTap: () => Navigator.of(context).pushNamed('/donor-list'),
                           ),
                           _buildActionCard(
-                            'My Requests',
-                            Icons.assignment,
-                            AppTheme.warning,
-                            () => Navigator.of(context).pushNamed('/blood-requests'),
+                            title: 'My Requests',
+                            description: 'Track request status & make payments',
+                            icon: Icons.assignment_rounded,
+                            gradient: const [Color(0xFFFB8C00), Color(0xFFEF6C00)],
+                            onTap: () => Navigator.of(context).pushNamed('/blood-requests'),
                           ),
                           _buildActionCard(
-                            'Chats',
-                            Icons.chat_bubble_outline_rounded,
-                            Colors.purple,
-                            () => Navigator.of(context).pushNamed('/chat-list'),
+                            title: 'Direct Chats',
+                            description: 'Message donors & hospital staff',
+                            icon: Icons.forum_rounded,
+                            gradient: const [Color(0xFF8E24AA), Color(0xFF6A1B9A)],
+                            onTap: () => Navigator.of(context).pushNamed('/chat-list'),
                           ),
                           _buildActionCard(
-                            'Appointments',
-                            Icons.calendar_month_outlined,
-                            Colors.teal,
-                            () => Navigator.of(context).pushNamed('/appointment-history'),
+                            title: 'Appointments',
+                            description: 'Manage clinic & screening visits',
+                            icon: Icons.calendar_month_rounded,
+                            gradient: const [Color(0xFF00ACC1), Color(0xFF00838F)],
+                            onTap: () => Navigator.of(context).pushNamed('/appointment-history'),
+                          ),
+                          _buildActionCard(
+                            title: 'Emergency SOS',
+                            description: 'Broadcast urgent emergency alert',
+                            icon: Icons.emergency_rounded,
+                            gradient: const [Color(0xFFFF1744), Color(0xFFD50000)],
+                            onTap: () => Navigator.of(context).pushNamed('/emergency-request'),
+                          ),
+                          _buildActionCard(
+                            title: 'Available Stock',
+                            description: 'Search live blood inventory packs',
+                            icon: Icons.inventory_2_rounded,
+                            gradient: const [Color(0xFF3F51B5), Color(0xFF303F9F)],
+                            onTap: () => Navigator.of(context).pushNamed('/available-blood-packs'),
                           ),
                         ],
                       ),
@@ -292,12 +317,12 @@ class PatientDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Recent Requests
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Recent Patient Blood Requests
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -305,77 +330,73 @@ class PatientDashboardScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Recent Requests',
+                            'Recent Blood Requests',
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.onSurface,
                             ),
                           ),
                           TextButton(
-                            onPressed: () {},
-                            child: Text('View All'),
+                            onPressed: () => Navigator.of(context).pushNamed('/blood-requests'),
+                            child: const Text('View All'),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       requests.isEmpty
                           ? Container(
-                              padding: EdgeInsets.symmetric(vertical: 48.h),
+                              padding: EdgeInsets.symmetric(vertical: 40.h),
                               child: Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.inbox_outlined,
-                                      size: 64.w,
+                                      size: 56.w,
                                       color: Colors.grey[400],
                                     ),
-                                    SizedBox(height: 16.h),
+                                    SizedBox(height: 12.h),
                                     Text(
-                                      'No requests yet',
+                                      'No active blood requests logged.',
                                       style: TextStyle(
                                         color: AppTheme.onSurfaceVariant,
-                                        fontSize: 16.sp,
+                                        fontSize: 14.sp,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             )
-                          : SizedBox(
-                              width: double.infinity,
-                              child: ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: requests.length > 3 ? 3 : requests.length,
-                                itemBuilder: (context, index) {
-                                  final request = requests[index];
-                                  return _buildRequestCard(context, request);
-                                },
-                              ),
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: requests.length > 3 ? 3 : requests.length,
+                              itemBuilder: (context, index) {
+                                final request = requests[index];
+                                return _buildRequestCard(context, request);
+                              },
                             ),
                     ],
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+              SliverToBoxAdapter(child: SizedBox(height: 80.h)),
             ],
           );
         },
       ),
-      // Emergency Floating Button
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).pushNamed('/emergency-request'),
         backgroundColor: AppTheme.error,
-        icon: const Icon(Icons.emergency),
-        label: const Text('Emergency'),
-        elevation: 4,
+        icon: const Icon(Icons.emergency_rounded, color: Colors.white),
+        label: const Text('EMERGENCY SOS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        elevation: 6,
       ),
     );
   }
 
-   Widget _buildStatCard(
+  Widget _buildStatCard(
     String value,
     String label,
     IconData icon,
@@ -392,13 +413,13 @@ class PatientDashboardScreen extends ConsumerWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20.r),
         child: Container(
-          padding: EdgeInsets.all(20.w),
+          padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -407,15 +428,15 @@ class PatientDashboardScreen extends ConsumerWidget {
           child: Row(
             children: [
               Container(
-                width: 48.w,
-                height: 48.w,
+                width: 44.w,
+                height: 44.w,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(icon, color: color, size: 24.w),
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +444,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                     Text(
                       value,
                       style: TextStyle(
-                        fontSize: 24.sp,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.onSurface,
                       ),
@@ -431,7 +452,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 11.sp,
                         color: AppTheme.onSurfaceVariant,
                       ),
                     ),
@@ -445,50 +466,74 @@ class PatientDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+  Widget _buildActionCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 56.w,
-              height: 56.w,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.first.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: 28.w),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.onSurface,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 26.w),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -496,7 +541,7 @@ class PatientDashboardScreen extends ConsumerWidget {
 
   Widget _buildRequestCard(BuildContext context, BloodRequestModel request) {
     final showPayButton = request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PENDING';
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
@@ -505,7 +550,7 @@ class PatientDashboardScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -516,10 +561,10 @@ class PatientDashboardScreen extends ConsumerWidget {
           Row(
             children: [
               Container(
-                width: 48.w,
-                height: 48.w,
+                width: 44.w,
+                height: 44.w,
                 decoration: BoxDecoration(
-                  color: _getStatusColor(request.status).withOpacity(0.1),
+                  color: _getStatusColor(request.status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
@@ -528,7 +573,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                   size: 24.w,
                 ),
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,12 +581,12 @@ class PatientDashboardScreen extends ConsumerWidget {
                     Text(
                       '${request.bloodGroup} • ${request.quantity} unit(s)',
                       style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.bold,
                         color: AppTheme.onSurface,
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 2.h),
                     Text(
                       request.hospitalName ?? 'Unknown hospital',
                       style: TextStyle(
@@ -553,9 +598,9 @@ class PatientDashboardScreen extends ConsumerWidget {
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(request.status).withOpacity(0.1),
+                  color: _getStatusColor(request.status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
@@ -570,14 +615,14 @@ class PatientDashboardScreen extends ConsumerWidget {
             ],
           ),
           if (showPayButton) ...[
-            const Divider(height: 24, thickness: 1),
+            const Divider(height: 20, thickness: 1),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Payment: PENDING',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 11.sp,
                     color: AppTheme.warning,
                     fontWeight: FontWeight.bold,
                   ),
@@ -593,7 +638,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     backgroundColor: AppTheme.success,
@@ -607,7 +652,7 @@ class PatientDashboardScreen extends ConsumerWidget {
               ],
             ),
           ] else if (request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PAID') ...[
-            const Divider(height: 24, thickness: 1),
+            const Divider(height: 20, thickness: 1),
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
@@ -616,7 +661,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                 Text(
                   'Payment: PAID (${request.paymentReference ?? ""})',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 11.sp,
                     color: AppTheme.success,
                     fontWeight: FontWeight.bold,
                   ),
@@ -647,15 +692,15 @@ class PatientDashboardScreen extends ConsumerWidget {
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return Icons.pending;
+        return Icons.pending_rounded;
       case 'approved':
-        return Icons.check;
+        return Icons.check_circle_rounded;
       case 'rejected':
-        return Icons.cancel;
+        return Icons.cancel_rounded;
       case 'fulfilled':
-        return Icons.done_all;
+        return Icons.task_alt_rounded;
       default:
-        return Icons.help;
+        return Icons.help_outline_rounded;
     }
   }
 }

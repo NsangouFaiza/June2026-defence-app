@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
-import 'core/utils/localization_service.dart';
 import 'core/providers/providers.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'features/onboarding/screens/onboarding_screen.dart';
@@ -44,6 +43,8 @@ import 'features/lab/screens/lab_dashboard_screen.dart';
 import 'features/payment/screens/payment_screen.dart';
 import 'core/providers/theme_provider.dart';
 import 'features/patient/screens/blood_requests_list_screen.dart';
+import 'features/donor/screens/digital_donor_card_screen.dart';
+import 'features/donor/screens/health_records_screen.dart';
 import 'core/widgets/role_guard.dart';
 
 void main() {
@@ -96,7 +97,7 @@ class LifeLinkApp extends ConsumerWidget {
             '/donor-dashboard': (context) => const RoleGuard(allowedRoles: ['donor'], child: DonorDashboardScreen()),
             '/patient-dashboard': (context) => const RoleGuard(allowedRoles: ['patient'], child: PatientDashboardScreen()),
             '/hospital-dashboard': (context) => const RoleGuard(allowedRoles: ['hospital_staff', 'blood_bank_staff'], child: HospitalDashboardScreen()),
-            '/lab-dashboard': (context) => const RoleGuard(allowedRoles: ['lab_technician'], child: LabDashboardScreen()),
+            '/lab-dashboard': (context) => const RoleGuard(allowedRoles: ['hospital_staff', 'blood_bank_staff', 'system_admin', 'blood_bank_admin'], child: LabDashboardScreen()),
             '/blood-inventory': (context) => const BloodInventoryScreen(),
             '/blood-request': (context) => const BloodRequestScreen(),
             '/blood-requests': (context) => const BloodRequestsListScreen(),
@@ -135,6 +136,8 @@ class LifeLinkApp extends ConsumerWidget {
             '/admin-panel': (context) => const RoleGuard(allowedRoles: ['system_admin', 'blood_bank_admin'], child: AdminPanelScreen()),
             '/eligibility-check': (context) => const EligibilityCheckScreen(),
             '/donation-history': (context) => const DonationHistoryScreen(),
+            '/digital-donor-card': (context) => const DigitalDonorCardScreen(),
+            '/health-records': (context) => const HealthRecordsScreen(),
             '/payment': (context) {
               final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
               return PaymentScreen(

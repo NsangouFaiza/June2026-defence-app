@@ -68,19 +68,6 @@ class Command(BaseCommand):
         staff_user.is_verified = True
         staff_user.save()
 
-        lab_user, _ = User.objects.get_or_create(
-            email='lab@lifelink.com',
-            defaults={
-                'full_name': 'Alice Lab Tech',
-                'phone_number': '+237600000005',
-                'role': 'lab_technician',
-                'is_verified': True,
-            },
-        )
-        lab_user.set_password('Lab@12345')
-        lab_user.is_verified = True
-        lab_user.save()
-
         from hospitals.models import Hospital, HospitalStaff
         from blood_banks.models import BloodBank
         from donors.models import Donor
@@ -182,4 +169,3 @@ class Command(BaseCommand):
         self.stdout.write('  donor@lifelink.com / Donor@12345')
         self.stdout.write('  patient@lifelink.com / Patient@12345')
         self.stdout.write('  staff@lifelink.com / Staff@12345')
-        self.stdout.write('  lab@lifelink.com / Lab@12345')

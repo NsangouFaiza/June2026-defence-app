@@ -28,7 +28,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from donors.models import Donor
-        is_staff = self.request.user.is_staff or self.request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin', 'lab_technician')
+        is_staff = self.request.user.is_staff or self.request.user.role in ('hospital_staff', 'blood_bank_admin', 'system_admin')
         donor_id = self.request.data.get('donor')
         
         if is_staff and donor_id:

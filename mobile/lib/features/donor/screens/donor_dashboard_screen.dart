@@ -20,7 +20,7 @@ class DonorDashboardScreen extends ConsumerWidget {
     final user = userAsync.value;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: FutureBuilder<DonorModel?>(
         future: donorRepo.getCurrentDonorProfile(),
         builder: (context, snapshot) {
@@ -28,7 +28,7 @@ class DonorDashboardScreen extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error loading donor profile: ${snapshot.error}'));
           }
 
           final donor = snapshot.data;
@@ -70,7 +70,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                     SizedBox(height: 16.h),
                     ElevatedButton(
                       onPressed: () {
-                        // Create donor profile
+                        // Create donor profile logic
                       },
                       child: Text(localization.translate('create_profile')),
                     ),
@@ -82,10 +82,10 @@ class DonorDashboardScreen extends ConsumerWidget {
 
           return CustomScrollView(
             slivers: [
-              // Header
+              // Header Banner
               SliverToBoxAdapter(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -108,8 +108,8 @@ class DonorDashboardScreen extends ConsumerWidget {
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
                           child: Container(
-                            width: 56.w,
-                            height: 56.w,
+                            width: 54.w,
+                            height: 54.w,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
@@ -122,16 +122,17 @@ class DonorDashboardScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        SizedBox(width: 16.w),
+                        SizedBox(width: 14.w),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
+                                user != null ? '${user.fullName} (${donor.donorIdCode})' : 'Donor ${donor.donorIdCode}',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white.withOpacity(0.95),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -145,17 +146,17 @@ class DonorDashboardScreen extends ConsumerWidget {
                                     padding: EdgeInsets.all(4.w),
                                     child: Image.asset(
                                       'assets/images/logo.png',
-                                      height: 24.w,
-                                      width: 24.w,
+                                      height: 20.w,
+                                      width: 20.w,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
                                   Expanded(
                                     child: Text(
-                                      'Donor Dashboard',
+                                      'LifeLink Donor Hub',
                                       style: TextStyle(
-                                        fontSize: 20.sp,
+                                        fontSize: 18.sp,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -167,12 +168,28 @@ class DonorDashboardScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        // Notification Icon
+                        InkWell(
+                          onTap: () => Navigator.of(context).pushNamed('/digital-donor-card'),
+                          child: Container(
+                            width: 42.w,
+                            height: 42.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.badge_outlined,
+                              color: Colors.white,
+                              size: 22.w,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/notifications'),
                           child: Container(
-                            width: 48.w,
-                            height: 48.w,
+                            width: 42.w,
+                            height: 42.w,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
@@ -183,7 +200,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                                 Icon(
                                   Icons.notifications_outlined,
                                   color: Colors.white,
-                                  size: 24.w,
+                                  size: 22.w,
                                 ),
                                 Positioned(
                                   top: 8.w,
@@ -206,33 +223,34 @@ class DonorDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              
-              // Donation Status Card
+              SliverToBoxAdapter(child: SizedBox(height: 20.h)),
+
+              // Donation Status & Eligibility Card
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: _buildDonationStatusCard(context, donor),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              
-              // Statistics Cards
+              SliverToBoxAdapter(child: SizedBox(height: 20.h)),
+
+              // Impact Metrics Section
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Your Impact',
+                        'YOUR DONATION IMPACT',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       Row(
                         children: [
                           Expanded(
@@ -259,7 +277,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              donor.totalUnits.toString(),
+                              '${donor.totalUnits} ml',
                               'Units Donated',
                               Icons.opacity,
                               AppTheme.accentColor,
@@ -280,67 +298,102 @@ class DonorDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Quick Actions
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Responsive 2-Column Grid of Action Cards
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quick Actions',
+                        'DONOR MANAGEMENT DASHBOARD',
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: 2,
-                        mainAxisSpacing: 12.w,
-                        crossAxisSpacing: 12.w,
+                        mainAxisSpacing: 14.h,
+                        crossAxisSpacing: 14.w,
                         childAspectRatio: 1.1,
                         children: [
                           _buildActionCard(
-                            'Donate Now',
-                            Icons.bloodtype,
-                            AppTheme.primaryColor,
-                            () => Navigator.of(context).pushNamed('/eligibility-check'),
+                            title: 'Appointments',
+                            description: 'Schedule & manage donation visits',
+                            icon: Icons.calendar_month_rounded,
+                            gradient: const [Color(0xFF1E88E5), Color(0xFF1565C0)],
+                            onTap: () => Navigator.of(context).pushNamed('/appointment-history'),
                           ),
                           _buildActionCard(
-                            'Schedule',
-                            Icons.calendar_today,
-                            AppTheme.accentColor,
-                            () => Navigator.of(context).pushNamed('/book-appointment'),
+                            title: 'Emergency Requests',
+                            description: 'Pledge blood for urgent patient needs',
+                            icon: Icons.notification_important_rounded,
+                            gradient: const [Color(0xFFE53935), Color(0xFFC62828)],
+                            onTap: () => Navigator.of(context).pushNamed('/blood-requests'),
                           ),
                           _buildActionCard(
-                            'Nearby Requests',
-                            Icons.location_on,
-                            AppTheme.success,
-                            () => Navigator.of(context).pushNamed('/blood-requests'),
+                            title: 'Banks & Drives',
+                            description: 'Find nearby centers & RSVP campaigns',
+                            icon: Icons.location_city_rounded,
+                            gradient: const [Color(0xFF43A047), Color(0xFF2E7D32)],
+                            onTap: () => Navigator.of(context).pushNamed('/campaigns'),
                           ),
                           _buildActionCard(
-                            'History',
-                            Icons.history,
-                            AppTheme.warning,
-                            () => Navigator.of(context).pushNamed('/donation-history'),
+                            title: 'Digital Donor Card',
+                            description: 'QR check-in & donor ID details',
+                            icon: Icons.badge_rounded,
+                            gradient: const [Color(0xFF8E24AA), Color(0xFF6A1B9A)],
+                            onTap: () => Navigator.of(context).pushNamed('/digital-donor-card'),
                           ),
                           _buildActionCard(
-                            localization.translate('chat'),
-                            Icons.chat_bubble,
-                            Colors.indigo,
-                            () => Navigator.of(context).pushNamed('/chat-list'),
+                            title: 'Health Records',
+                            description: 'Track vitals & lab screening history',
+                            icon: Icons.health_and_safety_rounded,
+                            gradient: const [Color(0xFF00ACC1), Color(0xFF00838F)],
+                            onTap: () => Navigator.of(context).pushNamed('/health-records'),
                           ),
                           _buildActionCard(
-                            localization.translate('rewards'),
-                            Icons.emoji_events,
-                            Colors.amber[800]!,
-                            () => Navigator.of(context).pushNamed('/rewards'),
+                            title: 'Check Eligibility',
+                            description: 'Take pre-donation questionnaire',
+                            icon: Icons.fact_check_rounded,
+                            gradient: const [Color(0xFFFF9800), Color(0xFFF57C00)],
+                            onTap: () => Navigator.of(context).pushNamed('/eligibility-check'),
+                          ),
+                          _buildActionCard(
+                            title: 'Rewards & Badges',
+                            description: 'Redeem points & level achievements',
+                            icon: Icons.emoji_events_rounded,
+                            gradient: const [Color(0xFFFFA000), Color(0xFFFF6F00)],
+                            onTap: () => Navigator.of(context).pushNamed('/rewards'),
+                          ),
+                          _buildActionCard(
+                            title: 'Find Hospital',
+                            description: 'Search hospitals, GPS distances & contacts',
+                            icon: Icons.local_hospital_rounded,
+                            gradient: const [Color(0xFFD81B60), Color(0xFFAD1457)],
+                            onTap: () => Navigator.of(context).pushNamed('/hospital-locator'),
+                          ),
+                          _buildActionCard(
+                            title: 'Leaderboard',
+                            description: 'Community rankings & hero donors',
+                            icon: Icons.leaderboard_rounded,
+                            gradient: const [Color(0xFF3F51B5), Color(0xFF303F9F)],
+                            onTap: () => Navigator.of(context).pushNamed('/leaderboard'),
+                          ),
+                          _buildActionCard(
+                            title: 'Direct Chat',
+                            description: 'Chat with hospitals & staff',
+                            icon: Icons.forum_rounded,
+                            gradient: const [Color(0xFF009688), Color(0xFF00695C)],
+                            onTap: () => Navigator.of(context).pushNamed('/chat-list'),
                           ),
                         ],
                       ),
@@ -348,12 +401,12 @@ class DonorDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 32.h)),
-              
-              // Achievements Section
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
+              // Achievements Level Badges
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -361,29 +414,29 @@ class DonorDashboardScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Achievements',
+                            'Donor Level & Achievements',
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.onSurface,
                             ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pushNamed('/rewards'),
-                            child: Text('View All'),
+                            child: const Text('View All'),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 12.h),
                       SizedBox(
-                        height: 130.h,
+                        height: 120.h,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
                             _buildAchievementBadge(
                               'Bronze Level',
                               '3+ Donations',
-                              Icons.military_tech,
+                              Icons.military_tech_rounded,
                               Colors.brown,
                               donor.totalDonations >= 3,
                             ),
@@ -391,7 +444,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                             _buildAchievementBadge(
                               'Silver Level',
                               '5+ Donations',
-                              Icons.workspace_premium,
+                              Icons.workspace_premium_rounded,
                               Colors.blueGrey,
                               donor.totalDonations >= 5,
                             ),
@@ -399,7 +452,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                             _buildAchievementBadge(
                               'Gold Level',
                               '8+ Donations',
-                              Icons.emoji_events,
+                              Icons.emoji_events_rounded,
                               Colors.amber,
                               donor.totalDonations >= 8,
                             ),
@@ -407,7 +460,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                             _buildAchievementBadge(
                               'Platinum Level',
                               '10+ Donations',
-                              Icons.stars,
+                              Icons.stars_rounded,
                               Colors.teal,
                               donor.totalDonations >= 10,
                             ),
@@ -420,7 +473,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+              SliverToBoxAdapter(child: SizedBox(height: 80.h)),
             ],
           );
         },
@@ -452,7 +505,7 @@ class DonorDashboardScreen extends ConsumerWidget {
     }
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -465,27 +518,27 @@ class DonorDashboardScreen extends ConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: (overallEligible ? AppTheme.success : AppTheme.warning).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: 56.w,
-            height: 56.w,
+            width: 52.w,
+            height: 52.w,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Icon(
-              overallEligible ? Icons.check_circle : Icons.schedule,
+              overallEligible ? Icons.check_circle_rounded : Icons.schedule_rounded,
               color: Colors.white,
-              size: 32.w,
+              size: 30.w,
             ),
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,12 +546,12 @@ class DonorDashboardScreen extends ConsumerWidget {
                 Text(
                   overallEligible ? 'Eligible to Donate' : 'Waiting / Restrained Period',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   lastDonationText,
                   style: TextStyle(
@@ -522,15 +575,15 @@ class DonorDashboardScreen extends ConsumerWidget {
             InkWell(
               onTap: () => Navigator.of(context).pushNamed('/book-appointment'),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
-                  'Donate',
+                  'Donate Now',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 11.sp,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.success,
                   ),
@@ -549,13 +602,13 @@ class DonorDashboardScreen extends ConsumerWidget {
     Color color,
   ) {
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -563,12 +616,12 @@ class DonorDashboardScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 32.w, color: color),
-          SizedBox(height: 8.h),
+          Icon(icon, size: 28.w, color: color),
+          SizedBox(height: 6.h),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.bold,
               color: AppTheme.onSurface,
             ),
@@ -576,7 +629,7 @@ class DonorDashboardScreen extends ConsumerWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: 11.sp,
               color: AppTheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
@@ -586,50 +639,74 @@ class DonorDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+  Widget _buildActionCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 56.w,
-              height: 56.w,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.first.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
-              child: Icon(icon, color: color, size: 28.w),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.onSurface,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 26.w),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -661,7 +738,7 @@ class DonorDashboardScreen extends ConsumerWidget {
             Icon(
               icon,
               color: unlocked ? color : Colors.grey[400],
-              size: 32.w,
+              size: 30.w,
             ),
             SizedBox(height: 4.h),
             Text(

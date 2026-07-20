@@ -102,9 +102,12 @@ class ProfileSettingsScreen extends ConsumerWidget {
                     ],
                   ),
                   SizedBox(height: 16.h),
+                  _buildInfoRow(context, 'User ID', user.role == 'lab_technician' ? 'TECH-2026-${user.id.toString().padLeft(4, '0')}' : 'USER-#${user.id}'),
                   _buildInfoRow(context, localization.translate('full_name'), user.fullName),
                   _buildInfoRow(context, localization.translate('email'), user.email),
                   _buildInfoRow(context, localization.translate('phone'), user.phoneNumber),
+                  if (user.role == 'lab_technician' || user.role == 'hospital_staff')
+                    _buildInfoRow(context, 'Hospital / Laboratory', 'Central Hospital & Regional Lab'),
                   _buildInfoRow(context, localization.translate('blood_group'), user.bloodGroup ?? 'N/A'),
                   _buildInfoRow(context, localization.translate('gender'), user.gender == 'M' ? 'Male' : (user.gender == 'F' ? 'Female' : 'N/A')),
                   _buildInfoRow(
@@ -117,7 +120,13 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   _buildInfoRow(context, localization.translate('address'), user.address ?? 'N/A'),
                   _buildInfoRow(context, localization.translate('city'), user.city ?? 'N/A'),
                   _buildInfoRow(context, localization.translate('region'), user.region ?? 'N/A'),
-                  _buildInfoRow(context, localization.translate('role'), user.role.toUpperCase()),
+                  _buildInfoRow(
+                    context,
+                    localization.translate('role'),
+                    user.role == 'lab_technician'
+                        ? 'Lab Technician'
+                        : (user.role == 'hospital_staff' ? 'Hospital Staff' : user.role.toUpperCase()),
+                  ),
                 ],
               ),
             ),
