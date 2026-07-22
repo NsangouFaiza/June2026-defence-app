@@ -4,10 +4,15 @@ from .models import Conversation, Message
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_email = serializers.EmailField(source='sender.email', read_only=True)
+    sender_name = serializers.CharField(source='sender.full_name', read_only=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'conversation', 'sender', 'sender_email', 'content', 'attachment', 'is_read', 'read_at', 'created_at']
+        fields = [
+            'id', 'conversation', 'sender', 'sender_email', 'sender_name',
+            'content', 'attachment', 'message_type', 'voice_duration',
+            'is_read', 'read_at', 'created_at'
+        ]
         read_only_fields = ['created_at']
 
 
@@ -29,26 +34,44 @@ class ConversationSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
     def get_last_message(self, obj):
-        last = obj.messages.last()
-        if last:
-            return MessageSerializer(last).data
+        try:
+            last = obj.messages.order_by('created_at').last()
+            if last:
+                return MessageSerializer(last, context=self.context).data
+        except Exception:
+            pass
         return None
 
     def get_participants_emails(self, obj):
-        return [p.email for p in obj.participants.all()]
+        try:
+            return [p.email for p in obj.participants.all()]
+        except Exception:
+            return []
 
     def get_participant1(self, obj):
-        parts = list(obj.participants.all())
-        return parts[0].id if len(parts) > 0 else 0
+        try:
+            parts = list(obj.participants.all())
+            return parts[0].id if len(parts) > 0 else 0
+        except Exception:
+            return 0
 
     def get_participant1_name(self, obj):
-        parts = list(obj.participants.all())
-        return parts[0].full_name if len(parts) > 0 else 'Unknown'
+        try:
+            parts = list(obj.participants.all())
+            return parts[0].full_name if len(parts) > 0 else 'Unknown'
+        except Exception:
+            return 'Unknown'
 
     def get_participant2(self, obj):
-        parts = list(obj.participants.all())
-        return parts[1].id if len(parts) > 1 else 0
+        try:
+            parts = list(obj.participants.all())
+            return parts[1].id if len(parts) > 1 else (parts[0].id if len(parts) > 0 else 0)
+        except Exception:
+            return 0
 
     def get_participant2_name(self, obj):
-        parts = list(obj.participants.all())
-        return parts[1].full_name if len(parts) > 1 else 'Unknown'
+        try:
+            parts = list(obj.participants.all())
+            return parts[1].full_name if len(parts) > 1 else (parts[0].full_name if len(parts) > 0 else 'Unknown')
+        except Exception:
+            return 'Unknown'

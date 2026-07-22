@@ -26,6 +26,10 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
       appBar: AppBar(
         title: const Text('My Health Records'),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: () async {

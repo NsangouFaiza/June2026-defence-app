@@ -21,6 +21,10 @@ class RewardsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(localization.translate('rewards')),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
           bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white.withOpacity(0.7),

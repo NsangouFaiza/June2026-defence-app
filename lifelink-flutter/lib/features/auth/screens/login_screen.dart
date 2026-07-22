@@ -47,9 +47,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
-        );
+        final errStr = e.toString();
+        if (errStr.contains('SUBSCRIPTION_EXPIRED') || errStr.toLowerCase().contains('subscription is inactive') || errStr.toLowerCase().contains('renew your subscription')) {
+          showDialog(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Subscription Expired')),
+                ],
+              ),
+              content: const Text(
+                'Your hospital subscription has expired or been deactivated. Please renew the monthly subscription (25 FCFA/month) to access the application.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pushNamed('/hospital-subscription-payment');
+                  },
+                  child: const Text('Renew Subscription'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -69,71 +101,95 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             children: [
               // Header with illustration
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.primaryColor,
-                      AppTheme.secondaryColor,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(40.r),
-                    bottomRight: Radius.circular(40.r),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    SizedBox(height: 20.h),
-                    // Healthcare logo
-                    Container(
-                      width: 120.w,
-                      height: 120.w,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
+              Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.primaryColor,
+                          AppTheme.secondaryColor,
                         ],
                       ),
-                      child: ClipOval(
-                        child: Padding(
-                          padding: EdgeInsets.all(12.w),
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            fit: BoxFit.contain,
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(40.r),
+                        bottomRight: Radius.circular(40.r),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        SizedBox(height: 20.h),
+                        // Healthcare logo
+                        Container(
+                          width: 120.w,
+                          height: 120.w,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Padding(
+                              padding: EdgeInsets.all(12.w),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                         ),
+                        SizedBox(height: 24.h),
+                        Text(
+                          'LifeLink',
+                          style: TextStyle(
+                            fontSize: 36.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          localization.translate('tagline'),
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 12.h,
+                    left: 12.w,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.of(context).maybePop();
+                          }
+                        },
                       ),
                     ),
-                    SizedBox(height: 24.h),
-                    Text(
-                      'LifeLink',
-                      style: TextStyle(
-                        fontSize: 36.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      localization.translate('tagline'),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               SizedBox(height: 32.h),
               // Login Form

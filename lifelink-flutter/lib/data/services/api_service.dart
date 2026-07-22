@@ -13,6 +13,15 @@ class ApiService {
     } catch (_) {}
     return 'http://127.0.0.1:8000/api';
   }
+
+  static String get serverBaseUrl {
+    final base = baseUrl;
+    if (base.endsWith('/api')) {
+      return base.substring(0, base.length - 4);
+    }
+    return base;
+  }
+
   static const String tokenKey = 'access_token';
 
   late final Dio _dio;
@@ -83,5 +92,20 @@ class ApiService {
 
   Future<Response> upload(String path, FormData formData) async {
     return await _dio.post(path, data: formData);
+  }
+
+  Future<Response> uploadProfilePicture(File file) async {
+    final fileName = file.path.split(Platform.pathSeparator).last;
+    final formData = FormData.fromMap({
+      'profile_picture': await MultipartFile.fromFile(
+        file.path,
+        filename: fileName,
+      ),
+    });
+    return await _dio.post('/users/profile-picture/', data: formData);
+  }
+
+  Future<Response> deleteProfilePicture() async {
+    return await _dio.delete('/users/remove-profile-picture/');
   }
 }

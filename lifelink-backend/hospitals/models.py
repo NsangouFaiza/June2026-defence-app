@@ -21,6 +21,13 @@ class Hospital(models.Model):
     has_emergency_services = models.BooleanField(default=True)
     services = models.TextField(blank=True, default='Blood Bank, Emergency Care, Transfusion, ICU, Lab Testing')
     is_active = models.BooleanField(default=True)
+    subscription_end_date = models.DateTimeField(null=True, blank=True)
+    SUBSCRIPTION_STATUS_CHOICES = (
+        ('ACTIVE', 'Active'),
+        ('EXPIRED', 'Expired'),
+        ('DEACTIVATED', 'Deactivated'),
+    )
+    subscription_status = models.CharField(max_length=20, choices=SUBSCRIPTION_STATUS_CHOICES, default='EXPIRED')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -29,10 +36,39 @@ class Hospital(models.Model):
         indexes = [
             models.Index(fields=['region']),
             models.Index(fields=['city']),
+            models.Index(fields=['subscription_status']),
         ]
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_subscription_active(self):
+        if not self.is_active:
+            return False
+        if self.subscription_status == 'DEACTIVATED':
+            return False
+        if not self.subscription_end_date:
+            return False
+        from django.utils import timezone
+        return self.subscription_end_date >= timezone.now()
+
+    def extend_subscription(self, months: int = 1):
+        """Extend subscription end date by given number of months."""
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        if self.subscription_end_date and self.subscription_end_date > now:
+            base_date = self.subscription_end_date
+        else:
+            base_date = now
+        # Extend by 30 days per month
+        self.subscription_end_date = base_date + timedelta(days=30 * months)
+        self.subscription_status = 'ACTIVE'
+        self.is_active = True
+        self.save(update_fields=['subscription_end_date', 'subscription_status', 'is_active', 'updated_at'])
+        return self.subscription_end_date
+
 
 
 class HospitalStaff(models.Model):

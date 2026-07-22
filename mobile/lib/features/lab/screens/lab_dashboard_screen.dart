@@ -793,6 +793,15 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text('Laboratory Dashboard'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),

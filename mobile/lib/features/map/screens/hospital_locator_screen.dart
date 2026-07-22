@@ -29,7 +29,7 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
   Timer? _debounceTimer;
   bool _useGoogleMaps = !kIsWeb; // Default to Local/Stylized Map on Web
   String _searchQuery = '';
-  String _activeFilter = 'ALL'; // ALL, NEAREST, BLOOD_BANK, EMERGENCY
+  String _activeFilter = 'NEAREST'; // ALL, NEAREST, BLOOD_BANK, EMERGENCY
   Position? _userPosition;
   HospitalModel? _selectedHospital;
   final TextEditingController _searchController = TextEditingController();
@@ -57,30 +57,27 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
   }
 
   Future<void> _initDataAndLocation() async {
-    await _fetchUserLocationSilently();
+    await _requestAndFetchUserLocation();
     await _loadHospitals();
   }
 
-  Future<void> _fetchUserLocationSilently() async {
+  Future<void> _requestAndFetchUserLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
       }
 
-      if (permission == LocationPermission.deniedForever) return;
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      if (mounted) {
-        setState(() {
-          _userPosition = position;
-        });
+      if (serviceEnabled && (permission == LocationPermission.whileInUse || permission == LocationPermission.always)) {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        if (mounted) {
+          setState(() {
+            _userPosition = position;
+          });
+        }
       }
     } catch (_) {}
   }
@@ -211,12 +208,20 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
     }
 
     // 2. Filter by chip category
-    if (_activeFilter == 'NEAREST') {
-      list.sort((a, b) => (a.distanceKm ?? 9999.0).compareTo(b.distanceKm ?? 9999.0));
-    } else if (_activeFilter == 'BLOOD_BANK') {
+    if (_activeFilter == 'BLOOD_BANK') {
       list = list.where((h) => h.hasBloodBank).toList();
     } else if (_activeFilter == 'EMERGENCY') {
       list = list.where((h) => h.hasEmergencyServices).toList();
+    }
+
+    // 3. Ascending order proximity sorting (nearest to farthest)
+    if (_activeFilter == 'NEAREST' || _userPosition != null) {
+      list.sort((a, b) {
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm!.compareTo(b.distanceKm!);
+      });
     }
 
     _filteredHospitals = list;
@@ -381,9 +386,26 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(localization.translate('hospital_locator')),
-        elevation: 0,
+        title: Text(
+          localization.translate('hospital_locator'),
+          style: const TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold),
+        ),
+        elevation: 1,
         backgroundColor: Colors.white,
+        foregroundColor: AppTheme.onSurface,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor, size: 24),
+          tooltip: 'Back',
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (Navigator.of(context, rootNavigator: true).canPop()) {
+              Navigator.of(context, rootNavigator: true).pop();
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.map_rounded, color: AppTheme.primaryColor),
@@ -787,22 +809,44 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
                                           ],
                                         ),
                                       ),
-                                      if (hospital.distanceKm != null)
-                                        Container(
-                                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primaryColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(12.r),
-                                          ),
-                                          child: Text(
-                                            '${hospital.distanceKm!.toStringAsFixed(1)} km',
-                                            style: TextStyle(
-                                              fontSize: 11.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.primaryColor,
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          if (hospital.distanceKm != null) ...[
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12.r),
+                                              ),
+                                              child: Text(
+                                                '📍 ${hospital.formattedDistance}',
+                                                style: TextStyle(
+                                                  fontSize: 11.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryColor,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
+                                            SizedBox(height: 4.h),
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(10.r),
+                                              ),
+                                              child: Text(
+                                                '⏱️ ${hospital.estimatedTravelTime}',
+                                                style: TextStyle(
+                                                  fontSize: 10.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue[800],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ],
                                   ),
                                   SizedBox(height: 10.h),

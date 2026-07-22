@@ -64,6 +64,10 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(localization.translate('eligibility_check')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

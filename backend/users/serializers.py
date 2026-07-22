@@ -4,10 +4,28 @@ from .models import User
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Custom token serializer that includes user data."""
+    """Custom token serializer that includes user data and subscription status check."""
 
     def validate(self, attrs):
         data = super().validate(attrs)
+
+        # Check hospital staff subscription status
+        if self.user.role == 'hospital_staff':
+            from hospitals.models import HospitalStaff
+            try:
+                staff = HospitalStaff.objects.get(user=self.user)
+                hospital = staff.hospital
+                if not hospital.is_subscription_active:
+                    raise serializers.ValidationError({
+                        'detail': 'Hospital subscription is inactive or expired. Please renew your subscription to access the application.',
+                        'code': 'SUBSCRIPTION_EXPIRED',
+                        'hospital_id': hospital.id,
+                        'hospital_name': hospital.name,
+                        'subscription_end_date': hospital.subscription_end_date.isoformat() if hospital.subscription_end_date else None,
+                    })
+            except HospitalStaff.DoesNotExist:
+                pass
+
         data['user'] = {
             'id': self.user.id,
             'email': self.user.email,
@@ -15,6 +33,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'role': self.user.role,
             'blood_group': self.user.blood_group,
             'language': self.user.language,
+            'profile_picture': self.user.profile_picture.url if self.user.profile_picture else None,
         }
         return data
 

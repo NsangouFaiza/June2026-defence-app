@@ -155,7 +155,7 @@ class DonorListScreen extends ConsumerWidget {
     );
   }
 
-  Color _getBloodGroupColor(String bloodGroup) {
+  Color _getBloodGroupColor(String? bloodGroup) {
     switch (bloodGroup) {
       case 'A+':
         return Colors.red;

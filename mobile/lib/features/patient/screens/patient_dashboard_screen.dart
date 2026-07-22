@@ -1,12 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/localization_service.dart';
-import '../../../../data/repositories/request_repository.dart';
 import '../../../../data/models/blood_request_model.dart';
-import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/models/blood_inventory_model.dart';
 import '../../../../data/models/hospital_model.dart';
 import '../../../../data/models/donor_model.dart';
@@ -72,6 +70,13 @@ class PatientDashboardScreen extends ConsumerWidget {
                     bottom: false,
                     child: Row(
                       children: [
+                        if (Navigator.canPop(context)) ...[
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          SizedBox(width: 4.w),
+                        ],
                         // Profile Avatar
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
@@ -83,11 +88,23 @@ class PatientDashboardScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                             ),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28.w,
-                            ),
+                            child: user?.fullProfilePictureUrl != null && user!.fullProfilePictureUrl!.isNotEmpty
+                                ? ClipOval(
+                                    child: CachedNetworkImage(
+                                      imageUrl: user.fullProfilePictureUrl!,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (context, url, error) => Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 28.w,
+                                      ),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 28.w,
+                                  ),
                           ),
                         ),
                         SizedBox(width: 14.w),

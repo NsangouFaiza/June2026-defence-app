@@ -8,6 +8,8 @@ import '../../../../features/auth/providers/auth_providers.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/role_router.dart';
+import '../../../../data/models/hospital_model.dart';
+import '../../../../data/repositories/hospital_repository.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -26,6 +28,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _regionController = TextEditingController();
+  final _hospitalNameController = TextEditingController();
+
+  int? _selectedHospitalId;
+  HospitalModel? _selectedHospital;
+  List<HospitalModel> _hospitalSearchResults = [];
+  bool _isSearchingHospitals = false;
+  bool _showHospitalOverlay = false;
+
   String? _selectedGender;
   String? _selectedBloodGroup;
   DateTime? _selectedDateOfBirth;
@@ -44,6 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _addressController.dispose();
     _cityController.dispose();
     _regionController.dispose();
+    _hospitalNameController.dispose();
     super.dispose();
   }
 
@@ -60,6 +71,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  void _onHospitalSearchChanged(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _hospitalSearchResults = [];
+        _showHospitalOverlay = false;
+      });
+      return;
+    }
+    setState(() => _isSearchingHospitals = true);
+    try {
+      final results = await ref
+          .read(hospitalRepositoryProvider)
+          .searchLiveHealthcareFacilities(query);
+      if (mounted) {
+        setState(() {
+          _hospitalSearchResults = results;
+          _showHospitalOverlay = results.isNotEmpty;
+          _isSearchingHospitals = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSearchingHospitals = false);
+      }
+    }
+  }
+
   Future<void> _register() async {
     final localization = ref.read(localizationServiceProvider);
     if (!_formKey.currentState!.validate()) return;
@@ -73,11 +111,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
+    if (_selectedRole == 'hospital_staff' && _hospitalNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter or select a Hospital Name')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.register({
+      final registerData = <String, dynamic>{
         'full_name': _fullNameController.text.trim(),
         'email': _emailController.text.trim(),
         'phone_number': _phoneController.text.trim(),
@@ -91,7 +136,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'region': _regionController.text.trim(),
         'role': _selectedRole,
         'language': localization.currentLanguage,
-      });
+      };
+
+      if (_selectedRole == 'hospital_staff') {
+        registerData['hospital_id'] = _selectedHospitalId;
+        registerData['hospital_name'] = _hospitalNameController.text.trim();
+        registerData['hospital_address'] = _addressController.text.trim();
+        registerData['hospital_city'] = _cityController.text.trim();
+        registerData['hospital_region'] = _regionController.text.trim();
+        registerData['hospital_phone'] = _phoneController.text.trim();
+        registerData['hospital_email'] = _emailController.text.trim();
+      }
+
+      final res = await authRepo.register(registerData);
 
       ref.invalidate(currentUserProvider);
       final user = await ref.read(currentUserProvider.future);
@@ -104,8 +161,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(localization.translate('registration_success'))),
         );
-        final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
-        Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
+
+        if (res['requires_payment'] == true || (user != null && user.role == 'hospital_staff' && res['requires_payment'] != false)) {
+          final hospitalObj = res['hospital'] as Map<String, dynamic>?;
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/hospital-subscription-payment',
+            (route) => false,
+            arguments: {
+              'hospitalId': hospitalObj?['id'],
+              'hospitalName': hospitalObj?['name'] ?? _hospitalNameController.text.trim(),
+            },
+          );
+        } else {
+          final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
+          Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -203,16 +273,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     Positioned(
-                      top: 16.h,
-                      left: 16.w,
+                      top: 12.h,
+                      left: 12.w,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.black.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
                           icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            }
+                          },
                         ),
                       ),
                     ),
@@ -279,6 +355,186 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ],
                 ),
                 SizedBox(height: 24.h),
+
+                if (_selectedRole == 'hospital_staff') ...[
+                  _buildSectionHeader('Hospital Information / Informations de l\'Hôpital'),
+                  SizedBox(height: 6.h),
+                  Text(
+                    'Search for a real hospital/clinic in Cameroon (e.g. HGOPY, CHU, CMA, HCY, HGY, HGD, HLD...) or write a new hospital name manually.',
+                    style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant),
+                  ),
+                  SizedBox(height: 12.h),
+                  TextFormField(
+                    controller: _hospitalNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Hospital Name / Nom de l\'hôpital',
+                      prefixIcon: const Icon(Icons.local_hospital_outlined),
+                      hintText: 'Type acronym or name (e.g. HGOPY, CHU, Laquintinie...)',
+                      suffixIcon: _isSearchingHospitals
+                          ? const UnconstrainedBox(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : _hospitalNameController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _hospitalNameController.clear();
+                                    setState(() {
+                                      _selectedHospitalId = null;
+                                      _selectedHospital = null;
+                                      _hospitalSearchResults = [];
+                                      _showHospitalOverlay = false;
+                                    });
+                                  },
+                                )
+                              : null,
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedHospitalId = null;
+                        _selectedHospital = null;
+                      });
+                      _onHospitalSearchChanged(val);
+                    },
+                    validator: (value) {
+                      if (_selectedRole == 'hospital_staff' && (value == null || value.trim().isEmpty)) {
+                        return 'Please enter or select a hospital';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  // Search Suggestions Overlay List
+                  if (_showHospitalOverlay && _hospitalSearchResults.isNotEmpty) ...[
+                    SizedBox(height: 6.h),
+                    Container(
+                      constraints: BoxConstraints(maxHeight: 220.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.symmetric(vertical: 4.h),
+                        itemCount: _hospitalSearchResults.length,
+                        separatorBuilder: (ctx, i) => const Divider(height: 1),
+                        itemBuilder: (ctx, index) {
+                          final h = _hospitalSearchResults[index];
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              Icons.location_city,
+                              color: AppTheme.primaryColor,
+                              size: 20.w,
+                            ),
+                            title: Text(
+                              h.name,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                            ),
+                            subtitle: Text(
+                              '${h.city ?? ''} ${h.region != null ? "(${h.region})" : ""}',
+                              style: TextStyle(fontSize: 11.sp),
+                            ),
+                            trailing: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: h.isSubscriptionActive
+                                    ? AppTheme.success.withOpacity(0.15)
+                                    : Colors.orange.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                h.isSubscriptionActive ? 'Subscribed' : 'Requires Payment',
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: h.isSubscriptionActive ? AppTheme.success : Colors.orange[800],
+                                ),
+                              ),
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _selectedHospital = h;
+                                _selectedHospitalId = (h.id < 9000) ? h.id : null;
+                                _hospitalNameController.text = h.name;
+                                if (h.address != null && h.address!.isNotEmpty) {
+                                  _addressController.text = h.address!;
+                                }
+                                if (h.city != null && h.city!.isNotEmpty) {
+                                  _cityController.text = h.city!;
+                                }
+                                if (h.region != null && h.region!.isNotEmpty) {
+                                  _regionController.text = h.region!;
+                                }
+                                _showHospitalOverlay = false;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  // Selected Hospital Subscription Badge
+                  if (_selectedHospital != null) ...[
+                    SizedBox(height: 10.h),
+                    Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: _selectedHospital!.isSubscriptionActive
+                            ? AppTheme.success.withOpacity(0.08)
+                            : Colors.amber.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: _selectedHospital!.isSubscriptionActive
+                              ? AppTheme.success.withOpacity(0.4)
+                              : Colors.amber.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _selectedHospital!.isSubscriptionActive
+                                ? Icons.check_circle_outline
+                                : Icons.info_outline,
+                            color: _selectedHospital!.isSubscriptionActive
+                                ? AppTheme.success
+                                : Colors.amber[800],
+                            size: 20.w,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              _selectedHospital!.isSubscriptionActive
+                                  ? 'Active Paid Subscription: You can continue registration and access the app directly.'
+                                  : 'No Active Subscription: Registration will redirect to the 25 FCFA/mo subscription payment page.',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: _selectedHospital!.isSubscriptionActive
+                                    ? AppTheme.success
+                                    : Colors.amber[900],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 20.h),
+                ],
                 
                 DropdownButtonFormField<String>(
                   value: localization.currentLanguage,

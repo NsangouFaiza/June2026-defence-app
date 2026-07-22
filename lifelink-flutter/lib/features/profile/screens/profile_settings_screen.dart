@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/providers/theme_provider.dart';
-import '../../../../features/auth/providers/auth_providers.dart';
-import '../../../../data/repositories/auth_repository.dart';
+import '../../../../core/services/permission_service.dart';
 import '../../../../data/models/user_model.dart';
 
 class ProfileSettingsScreen extends ConsumerWidget {
@@ -15,7 +18,6 @@ class ProfileSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final localization = ref.watch(localizationServiceProvider);
-    final authRepo = ref.watch(authRepositoryProvider);
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -36,6 +38,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
     UserModel user,
     LocalizationService localization,
   ) {
+    final avatarUrl = user.fullProfilePictureUrl;
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.w),
       child: Column(
@@ -43,35 +47,64 @@ class ProfileSettingsScreen extends ConsumerWidget {
         children: [
           // Profile Picture
           Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 60.r,
-                  backgroundColor: AppTheme.primaryColor,
-                  child: Text(
-                    user.fullName.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 48.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            child: GestureDetector(
+              onTap: () => _showProfilePictureOptions(context, ref, user),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 120.w,
+                    height: 120.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.primaryColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: avatarUrl != null && avatarUrl.isNotEmpty
+                        ? ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: avatarUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const CircularProgressIndicator(),
+                              errorWidget: (context, url, error) => Center(
+                                child: Text(
+                                  user.fullName.isNotEmpty ? user.fullName.substring(0, 1).toUpperCase() : 'U',
+                                  style: TextStyle(
+                                    fontSize: 48.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              user.fullName.isNotEmpty ? user.fullName.substring(0, 1).toUpperCase() : 'U',
+                              style: TextStyle(
+                                fontSize: 48.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 20.r,
+                      backgroundColor: AppTheme.primaryColor,
+                      child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: CircleAvatar(
-                    radius: 20.r,
-                    backgroundColor: AppTheme.primaryColor,
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-                      onPressed: () {
-                        // Change profile picture
-                      },
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           SizedBox(height: 32.h),
@@ -313,6 +346,173 @@ class ProfileSettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _showProfilePictureOptions(BuildContext context, WidgetRef ref, UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Profile Photo / Photo de profil',
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16.h),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: AppTheme.primaryColor),
+                title: const Text('Take Photo / Prendre une photo'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  if (context.mounted) {
+                    _pickAndUploadImage(context, ref, ImageSource.camera);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: AppTheme.primaryColor),
+                title: const Text('Choose from Gallery / Choisir dans la galerie'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  if (context.mounted) {
+                    _pickAndUploadImage(context, ref, ImageSource.gallery);
+                  }
+                },
+              ),
+              if (user.profilePicture != null && user.profilePicture!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: AppTheme.error),
+                  title: const Text('Remove Photo / Supprimer la photo', style: TextStyle(color: AppTheme.error)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _deleteImage(context, ref);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadImage(
+    BuildContext context,
+    WidgetRef ref,
+    ImageSource source,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(source == ImageSource.camera ? 'Opening Camera...' : 'Opening Gallery...'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    final picker = ImagePicker();
+    try {
+      final XFile? picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (picked != null) {
+        if (context.mounted) {
+          await _uploadImage(context, ref, File(picked.path));
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No image selected.')),
+          );
+        }
+      }
+    } on PlatformException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        if (e.code.toLowerCase().contains('permission') || e.code.toLowerCase().contains('access_denied')) {
+          if (source == ImageSource.camera) {
+            await PermissionService.requestCameraPermission(context);
+          } else {
+            await PermissionService.requestPhotosPermission(context);
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open ${source == ImageSource.camera ? "camera" : "gallery"}: ${e.message ?? e.code}'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting image: ${e.toString()}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadImage(BuildContext context, WidgetRef ref, File file) async {
+    try {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Uploading profile photo...')),
+        );
+      }
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.uploadProfilePicture(file);
+      ref.invalidate(currentUserProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload photo: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteImage(BuildContext context, WidgetRef ref) async {
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.deleteProfilePicture();
+      ref.invalidate(currentUserProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture removed.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove photo: ${e.toString()}')),
+        );
+      }
+    }
   }
 }
 

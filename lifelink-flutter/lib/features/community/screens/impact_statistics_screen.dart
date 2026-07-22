@@ -18,6 +18,10 @@ class ImpactStatisticsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(localization.translate('impact_statistics')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

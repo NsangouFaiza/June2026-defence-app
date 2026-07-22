@@ -105,6 +105,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(localization.translate('reports')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

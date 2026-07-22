@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -36,18 +37,83 @@ def register(request):
         user = serializer.save()
         user.is_verified = True
         user.save()
-        
+
+        hospital_data = None
+        requires_payment = False
+
+        if user.role == 'hospital_staff':
+            from hospitals.models import Hospital, HospitalStaff
+            h_id = request.data.get('hospital_id')
+            h_name = request.data.get('hospital_name') or request.data.get('hospital_name_input')
+            h_address = request.data.get('hospital_address') or user.address or 'Cameroon'
+            h_city = request.data.get('hospital_city') or user.city or 'Douala'
+            h_region = request.data.get('hospital_region') or user.region or 'Littoral'
+            h_phone = request.data.get('hospital_phone') or user.phone_number
+            h_email = request.data.get('hospital_email') or user.email
+
+            hospital = None
+            if h_id:
+                try:
+                    hospital = Hospital.objects.get(pk=h_id)
+                except Hospital.DoesNotExist:
+                    pass
+            if not hospital and h_name:
+                h_name_clean = h_name.strip()
+                # Try exact case-insensitive match
+                hospital = Hospital.objects.filter(name__iexact=h_name_clean).first()
+                if not hospital:
+                    # Try partial match (e.g. HGOPY or Hôpital Laquintinie)
+                    hospital = Hospital.objects.filter(name__icontains=h_name_clean).first()
+                if not hospital:
+                    hospital = Hospital.objects.create(
+                        name=h_name_clean,
+                        address=h_address,
+                        city=h_city,
+                        region=h_region,
+                        phone_number=h_phone,
+                        email=h_email,
+                        is_active=True,
+                        subscription_status='EXPIRED',
+                    )
+            if not hospital:
+                hospital = Hospital.objects.create(
+                    name=f"{user.full_name}'s Hospital",
+                    address=user.address or 'Douala',
+                    city=user.city or 'Douala',
+                    region=user.region or 'Littoral',
+                    phone_number=user.phone_number,
+                    email=user.email,
+                    is_active=True,
+                    subscription_status='EXPIRED',
+                )
+
+            HospitalStaff.objects.get_or_create(
+                user=user,
+                defaults={'hospital': hospital, 'position': request.data.get('position', 'Staff')}
+            )
+
+            requires_payment = not hospital.is_subscription_active
+            hospital_data = {
+                'id': hospital.id,
+                'name': hospital.name,
+                'subscription_active': hospital.is_subscription_active,
+                'subscription_end_date': hospital.subscription_end_date.isoformat() if hospital.subscription_end_date else None,
+                'subscription_status': hospital.subscription_status,
+            }
+
         try:
             send_verification_email(user)
         except Exception:
             pass
-            
+
         refresh = RefreshToken.for_user(user)
         return Response(
             {
                 'message': 'User registered successfully.',
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
+                'requires_payment': requires_payment,
+                'hospital': hospital_data,
                 'user': {
                     'id': user.id,
                     'email': user.email,
@@ -74,11 +140,47 @@ def get_current_user(request):
 @permission_classes([permissions.IsAuthenticated])
 def update_profile(request):
     """Update user profile."""
-    serializer = UserSerializer(request.user, data=request.data, partial=True)
+    serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_profile_picture(request):
+    """Upload or update user profile picture."""
+    file_obj = request.FILES.get('profile_picture') or request.FILES.get('file') or request.FILES.get('image')
+    if not file_obj:
+        return Response({'detail': 'No image file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if user.profile_picture:
+        try:
+            user.profile_picture.delete(save=False)
+        except Exception:
+            pass
+    user.profile_picture = file_obj
+    user.save()
+    serializer = UserSerializer(user, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def delete_profile_picture(request):
+    """Remove user profile picture."""
+    user = request.user
+    if user.profile_picture:
+        try:
+            user.profile_picture.delete(save=False)
+        except Exception:
+            pass
+        user.profile_picture = None
+        user.save()
+    serializer = UserSerializer(user, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -191,3 +293,96 @@ def send_verification_email(user):
         [user.email],
         fail_silently=False,
     )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_donor_contacts(request):
+    """List all registered donors available for contact (excluding current user)."""
+    users = User.objects.filter(role='donor').exclude(id=request.user.id).order_by('full_name')
+    data = []
+    for u in users:
+        donor_profile = getattr(u, 'donor_profile', None)
+        data.append({
+            'id': u.id,
+            'user_id': u.id,
+            'email': u.email,
+            'full_name': u.full_name,
+            'role': u.role,
+            'blood_group': u.blood_group or 'N/A',
+            'phone_number': u.phone_number or '',
+            'city': u.city or '',
+            'region': u.region or '',
+            'profile_picture': u.profile_picture.url if u.profile_picture else None,
+            'is_eligible': donor_profile.is_eligible if donor_profile else True,
+            'donor_code': donor_profile.donor_code if (donor_profile and donor_profile.donor_code) else f"DON-2026-{u.id:04d}",
+        })
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_patient_contacts(request):
+    """List all patients available for contact (excluding current user)."""
+    users = User.objects.filter(role='patient').exclude(id=request.user.id).order_by('full_name')
+    data = []
+    for u in users:
+        patient_profile = getattr(u, 'patient_profile', None)
+        active_requests = 0
+        medical_conditions = ''
+        if patient_profile:
+            active_requests = patient_profile.blood_requests.filter(status__in=['PENDING', 'APPROVED', 'FULFILLED']).count()
+            medical_conditions = patient_profile.medical_conditions or ''
+        data.append({
+            'id': u.id,
+            'user_id': u.id,
+            'email': u.email,
+            'full_name': u.full_name,
+            'role': u.role,
+            'blood_group': u.blood_group or 'N/A',
+            'phone_number': u.phone_number or '',
+            'city': u.city or '',
+            'region': u.region or '',
+            'profile_picture': u.profile_picture.url if u.profile_picture else None,
+            'active_requests_count': active_requests,
+            'medical_conditions': medical_conditions,
+        })
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_staff_contacts(request):
+    """List all staff members available for contact (excluding current user)."""
+    staff_roles = ['hospital_staff', 'blood_bank_admin', 'system_admin']
+    users = User.objects.filter(
+        Q(role__in=staff_roles) | Q(is_staff=True) | Q(is_superuser=True)
+    ).exclude(id=request.user.id).distinct().order_by('full_name')
+    data = []
+    for u in users:
+        hospital_name = 'LifeLink Support'
+        position = 'Staff'
+        if hasattr(u, 'hospital_staff') and u.hospital_staff and u.hospital_staff.hospital:
+            hospital_name = u.hospital_staff.hospital.name
+            position = u.hospital_staff.position or 'Hospital Staff'
+        elif u.role == 'blood_bank_admin':
+            position = 'Blood Bank Administrator'
+        elif u.role == 'system_admin' or u.is_superuser:
+            position = 'System Administrator'
+
+        data.append({
+            'id': u.id,
+            'user_id': u.id,
+            'email': u.email,
+            'full_name': u.full_name,
+            'role': u.role,
+            'blood_group': u.blood_group or 'N/A',
+            'phone_number': u.phone_number or '',
+            'city': u.city or '',
+            'region': u.region or '',
+            'profile_picture': u.profile_picture.url if u.profile_picture else None,
+            'hospital_name': hospital_name,
+            'position': position,
+        })
+    return Response(data)
+

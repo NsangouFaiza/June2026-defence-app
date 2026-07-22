@@ -11,6 +11,7 @@ NOTIFICATION_TYPE_CHOICES = (
     ('DONATION_COMPLETE', 'Donation Complete'),
     ('REWARD_EARNED', 'Reward Earned'),
     ('SYSTEM', 'System Notification'),
+    ('HOSPITAL_SUBSCRIPTION', 'Hospital Subscription Payment'),
 )
 
 

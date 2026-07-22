@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../services/api_service.dart';
@@ -33,7 +34,7 @@ class AuthRepository {
     }
   }
 
-  Future<void> register(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
     try {
       final response = await _apiService.post('/users/register/', data);
       
@@ -45,6 +46,8 @@ class AuthRepository {
       await prefs.setString('refresh_token', refreshToken);
       await prefs.setBool('is_logged_in', true);
       await prefs.setBool('has_seen_onboarding', true);
+
+      return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       final responseData = e.response?.data;
       if (responseData is Map) {
@@ -121,6 +124,24 @@ class AuthRepository {
       });
     } catch (e) {
       throw Exception('Failed to change password: ${e.toString()}');
+    }
+  }
+
+  Future<UserModel> uploadProfilePicture(File file) async {
+    try {
+      final response = await _apiService.uploadProfilePicture(file);
+      return UserModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to upload profile picture: ${e.toString()}');
+    }
+  }
+
+  Future<UserModel> deleteProfilePicture() async {
+    try {
+      final response = await _apiService.deleteProfilePicture();
+      return UserModel.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Failed to remove profile picture: ${e.toString()}');
     }
   }
 }

@@ -82,6 +82,10 @@ class _EmergencyRequestScreenState extends ConsumerState<EmergencyRequestScreen>
       appBar: AppBar(
         title: Text(localization.translate('emergency_request')),
         backgroundColor: AppTheme.error,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

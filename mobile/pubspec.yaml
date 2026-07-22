@@ -44,8 +44,11 @@ dependencies:
   firebase_messaging: ^16.4.1
   flutter_local_notifications: ^16.3.2
 
-  # Chat
+  # Chat & Audio
   socket_io_client: ^2.0.3+1
+  record: ^5.1.2
+  audioplayers: ^5.2.1
+  path_provider: ^2.1.2
 
   # Images
   cached_network_image: ^3.3.1

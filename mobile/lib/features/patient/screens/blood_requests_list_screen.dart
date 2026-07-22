@@ -419,6 +419,10 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(localization.translate('blood_request')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: userAsync.when(
         data: (user) {

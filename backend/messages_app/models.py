@@ -27,10 +27,16 @@ class Conversation(models.Model):
 
 
 class Message(models.Model):
+    MESSAGE_TYPES = (
+        ('text', 'Text'),
+        ('voice', 'Voice'),
+    )
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
-    content = models.TextField()
-    attachment = models.FileField(upload_to='messages/', null=True, blank=True)
+    content = models.TextField(blank=True, default='')
+    attachment = models.FileField(upload_to='voice_messages/', null=True, blank=True)
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='text')
+    voice_duration = models.IntegerField(default=0)
     is_read = models.BooleanField(default=False)
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

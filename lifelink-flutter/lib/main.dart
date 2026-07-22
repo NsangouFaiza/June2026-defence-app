@@ -45,6 +45,8 @@ import 'core/providers/theme_provider.dart';
 import 'features/patient/screens/blood_requests_list_screen.dart';
 import 'features/donor/screens/digital_donor_card_screen.dart';
 import 'features/donor/screens/health_records_screen.dart';
+import 'features/payment/screens/hospital_subscription_payment_screen.dart';
+import 'features/hospital/screens/hospital_subscription_history_screen.dart';
 import 'core/widgets/role_guard.dart';
 
 void main() {
@@ -143,6 +145,20 @@ class LifeLinkApp extends ConsumerWidget {
               return PaymentScreen(
                 requestId: args?['requestId'] as int? ?? 0,
                 amount: args?['amount'] as double? ?? 0.0,
+              );
+            },
+            '/hospital-subscription-payment': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              return HospitalSubscriptionPaymentScreen(
+                hospitalId: args?['hospitalId'] as int?,
+                hospitalName: args?['hospitalName'] as String?,
+                currentExpiryDate: args?['currentExpiryDate'] as String?,
+              );
+            },
+            '/hospital-subscription-history': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              return HospitalSubscriptionHistoryScreen(
+                hospitalId: args?['hospitalId'] as int?,
               );
             },
           },

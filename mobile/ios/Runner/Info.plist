@@ -79,5 +79,7 @@
 	<string>LifeLink needs access to your camera so you can take and upload a profile picture.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>LifeLink needs access to your photo library to let you select and upload profile pictures or donation documents.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LifeLink needs access to your microphone so you can record and send voice messages in chat.</string>
 </dict>
 </plist>

@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class UserModel {
   final int id;
   final String fullName;
@@ -14,6 +16,7 @@ class UserModel {
   final bool? notificationPreferences;
   final bool? emailNotifications;
   final String language;
+  final String? profilePicture;
   final DateTime? createdAt;
 
   UserModel({
@@ -32,8 +35,19 @@ class UserModel {
     this.notificationPreferences,
     this.emailNotifications,
     this.language = 'en',
+    this.profilePicture,
     this.createdAt,
   });
+
+  String? get fullProfilePictureUrl {
+    if (profilePicture == null || profilePicture!.isEmpty) return null;
+    if (profilePicture!.startsWith('http://') || profilePicture!.startsWith('https://')) {
+      return profilePicture;
+    }
+    final server = ApiService.serverBaseUrl;
+    final path = profilePicture!.startsWith('/') ? profilePicture : '/$profilePicture';
+    return '$server$path';
+  }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -54,6 +68,7 @@ class UserModel {
       notificationPreferences: json['notification_preferences'],
       emailNotifications: json['email_notifications'],
       language: json['language'] ?? 'en',
+      profilePicture: json['profile_picture'] ?? json['profilePicture'],
       createdAt: json['date_joined'] != null
           ? DateTime.parse(json['date_joined'])
           : json['created_at'] != null
@@ -79,6 +94,7 @@ class UserModel {
       'notification_preferences': notificationPreferences,
       'email_notifications': emailNotifications,
       'language': language,
+      'profile_picture': profilePicture,
     };
   }
 }

@@ -113,6 +113,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(localization.translate('payment')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

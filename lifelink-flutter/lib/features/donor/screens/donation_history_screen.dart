@@ -18,6 +18,10 @@ class DonationHistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(localization.translate('donation_history')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: FutureBuilder<List<DonationModel>>(
         future: donationRepo.getDonationHistory(),

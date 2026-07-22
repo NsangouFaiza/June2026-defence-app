@@ -20,6 +20,10 @@ class LeaderboardScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(localization.translate('leaderboard')),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
           bottom: TabBar(
             tabs: [
               Tab(text: localization.translate('top_donors')),

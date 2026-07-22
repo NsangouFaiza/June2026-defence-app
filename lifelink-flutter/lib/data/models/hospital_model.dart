@@ -16,6 +16,10 @@ class HospitalModel {
   final bool isActive;
   final DateTime? createdAt;
 
+  final String? subscriptionStatus;
+  final DateTime? subscriptionEndDate;
+  final bool isSubscriptionActive;
+
   // Real-time dynamic distance calculated from user's current GPS location
   double? distanceKm;
 
@@ -35,6 +39,9 @@ class HospitalModel {
     this.hasEmergencyServices = true,
     this.services = 'Blood Bank, Emergency Care, Transfusion, ICU, Lab Testing',
     required this.isActive,
+    this.subscriptionStatus,
+    this.subscriptionEndDate,
+    this.isSubscriptionActive = false,
     this.createdAt,
     this.distanceKm,
   });
@@ -44,6 +51,27 @@ class HospitalModel {
       return ['Blood Bank', 'Emergency Care', 'Transfusion'];
     }
     return services!.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
+
+  String get formattedDistance {
+    if (distanceKm == null) return 'Distance unknown';
+    if (distanceKm! < 1.0) {
+      final meters = (distanceKm! * 1000).round();
+      return '$meters m';
+    }
+    return '${distanceKm!.toStringAsFixed(1)} km';
+  }
+
+  String get estimatedTravelTime {
+    if (distanceKm == null) return 'N/A';
+    int mins = (distanceKm! / 30.0 * 60).round();
+    if (mins < 1) mins = 1;
+    if (mins < 60) {
+      return '~$mins min${mins > 1 ? 's' : ''} drive';
+    }
+    final hrs = mins ~/ 60;
+    final remMins = mins % 60;
+    return '~$hrs hr ${remMins > 0 ? '$remMins min' : ''} drive';
   }
 
   factory HospitalModel.fromJson(Map<String, dynamic> json) {
@@ -63,6 +91,11 @@ class HospitalModel {
       hasEmergencyServices: json['has_emergency_services'] as bool? ?? true,
       services: json['services'] as String? ?? 'Blood Bank, Emergency Care, Transfusion, ICU, Lab Testing',
       isActive: json['is_active'] ?? true,
+      subscriptionStatus: json['subscription_status'],
+      subscriptionEndDate: json['subscription_end_date'] != null
+          ? DateTime.tryParse(json['subscription_end_date'].toString())
+          : null,
+      isSubscriptionActive: json['is_subscription_active'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -86,6 +119,9 @@ class HospitalModel {
       'has_emergency_services': hasEmergencyServices,
       'services': services,
       'is_active': isActive,
+      'subscription_status': subscriptionStatus,
+      'subscription_end_date': subscriptionEndDate?.toIso8601String(),
+      'is_subscription_active': isSubscriptionActive,
     };
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
@@ -186,25 +187,47 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                     bottom: false,
                     child: Row(
                       children: [
+                        if (Navigator.canPop(context)) ...[
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          SizedBox(width: 4.w),
+                        ],
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
-                          child: Container(
-                            width: 54.w,
-                            height: 54.w,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: ClipOval(
-                              child: Padding(
-                                padding: EdgeInsets.all(4.w),
-                                child: Image.asset(
-                                  'assets/images/logo.png',
-                                  fit: BoxFit.contain,
+                          child: Builder(
+                            builder: (context) {
+                              final user = ref.watch(currentUserProvider).value;
+                              final pic = user?.fullProfilePictureUrl;
+                              return Container(
+                                width: 54.w,
+                                height: 54.w,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
                                 ),
-                              ),
-                            ),
+                                child: ClipOval(
+                                  child: pic != null && pic.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: pic,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (context, url, error) => Padding(
+                                            padding: EdgeInsets.all(4.w),
+                                            child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+                                          ),
+                                        )
+                                      : Padding(
+                                          padding: EdgeInsets.all(4.w),
+                                          child: Image.asset(
+                                            'assets/images/logo.png',
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         SizedBox(width: 14.w),
@@ -339,6 +362,85 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                           ],
                         ),
                         const Divider(height: 20, thickness: 1),
+
+                        // Subscription Status Banner
+                        Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: hospital.isSubscriptionActive
+                                ? AppTheme.success.withOpacity(0.08)
+                                : AppTheme.error.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: hospital.isSubscriptionActive
+                                  ? AppTheme.success.withOpacity(0.3)
+                                  : AppTheme.error.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                hospital.isSubscriptionActive
+                                    ? Icons.verified_user
+                                    : Icons.gpp_maybe,
+                                color: hospital.isSubscriptionActive
+                                    ? AppTheme.success
+                                    : AppTheme.error,
+                                size: 22.w,
+                              ),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      hospital.isSubscriptionActive
+                                          ? 'Subscription Active (25 FCFA/mo)'
+                                          : 'Subscription Expired / Inactive',
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: hospital.isSubscriptionActive
+                                            ? AppTheme.success
+                                            : AppTheme.error,
+                                      ),
+                                    ),
+                                    if (hospital.subscriptionEndDate != null) ...[
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        'Valid until: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: AppTheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pushNamed(
+                                    '/hospital-subscription-history',
+                                    arguments: {'hospitalId': hospital.id},
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                                  backgroundColor: AppTheme.primaryColor,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Invoices & Renew',
+                                  style: TextStyle(fontSize: 11.sp),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+
                         if (hospital.description != null && hospital.description!.isNotEmpty) ...[
                           Text(
                             hospital.description!,

@@ -1,13 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/localization_service.dart';
-import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/models/donor_model.dart';
-import '../../../../data/repositories/auth_repository.dart';
-import '../../../../features/auth/providers/auth_providers.dart';
 
 class DonorDashboardScreen extends ConsumerWidget {
   const DonorDashboardScreen({super.key});
@@ -104,22 +101,47 @@ class DonorDashboardScreen extends ConsumerWidget {
                     bottom: false,
                     child: Row(
                       children: [
+                        if (Navigator.canPop(context)) ...[
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          SizedBox(width: 4.w),
+                        ],
                         // Profile Avatar
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/profile'),
-                          child: Container(
-                            width: 54.w,
-                            height: 54.w,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28.w,
-                            ),
+                          child: Builder(
+                            builder: (context) {
+                              final user = ref.watch(currentUserProvider).value;
+                              final pic = user?.fullProfilePictureUrl;
+                              return Container(
+                                width: 54.w,
+                                height: 54.w,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: pic != null && pic.isNotEmpty
+                                    ? ClipOval(
+                                        child: CachedNetworkImage(
+                                          imageUrl: pic,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (context, url, error) => Icon(
+                                            Icons.person,
+                                            color: Colors.white,
+                                            size: 28.w,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 28.w,
+                                      ),
+                              );
+                            },
                           ),
                         ),
                         SizedBox(width: 14.w),
