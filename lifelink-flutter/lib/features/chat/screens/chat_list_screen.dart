@@ -316,105 +316,164 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen>
           final isUnread =
               lastMsg != null && !lastMsg.isRead && lastMsg.senderId != myId;
 
-          return Card(
-            elevation: 0.5,
-            margin: EdgeInsets.only(bottom: 12.h),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-              side: BorderSide(color: Colors.grey[200]!),
+          return Dismissible(
+            key: Key('conversation_${conversation.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(right: 20.w),
+              decoration: BoxDecoration(
+                color: AppTheme.error,
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                color: Colors.white,
+              ),
             ),
-            child: InkWell(
-              onTap: () async {
-                await Navigator.of(context).pushNamed(
-                  '/chat',
-                  arguments: {
-                    'conversationId': conversation.id,
-                    'otherUserId': otherParticipantId,
-                  },
-                );
-                _loadConversations();
-              },
-              borderRadius: BorderRadius.circular(16.r),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 26.r,
-                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                      child: Text(
-                        otherParticipantName.isNotEmpty
-                            ? otherParticipantName.substring(0, 1).toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
+            confirmDismiss: (direction) async {
+              return await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Conversation'),
+                  content: const Text('Are you sure you want to delete this conversation? This action cannot be undone.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
                     ),
-                    SizedBox(width: 14.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  otherParticipantName,
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                formattedTime,
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  lastMsgContent,
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: isUnread
-                                        ? Colors.black87
-                                        : Colors.grey[600],
-                                    fontWeight: isUnread
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (isUnread)
-                                Container(
-                                  width: 10.w,
-                                  height: 10.w,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.error,
+                        foregroundColor: Colors.white,
                       ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Delete'),
                     ),
                   ],
+                ),
+              );
+            },
+            onDismissed: (direction) async {
+              try {
+                await ref.read(messageRepositoryProvider).deleteConversation(conversation.id);
+                setState(() {
+                  _conversations.removeAt(index);
+                });
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Conversation deleted successfully')),
+                  );
+                }
+              } catch (e) {
+                _loadConversations();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete conversation: ${e.toString()}')),
+                  );
+                }
+              }
+            },
+            child: Card(
+              elevation: 0.5,
+              margin: EdgeInsets.only(bottom: 12.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                side: BorderSide(color: Colors.grey[200]!),
+              ),
+              child: InkWell(
+                onTap: () async {
+                  await Navigator.of(context).pushNamed(
+                    '/chat',
+                    arguments: {
+                      'conversationId': conversation.id,
+                      'otherUserId': otherParticipantId,
+                    },
+                  );
+                  _loadConversations();
+                },
+                borderRadius: BorderRadius.circular(16.r),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 26.r,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        child: Text(
+                          otherParticipantName.isNotEmpty
+                              ? otherParticipantName.substring(0, 1).toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    otherParticipantName,
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  formattedTime,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6.h),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    lastMsgContent,
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: isUnread
+                                          ? Colors.black87
+                                          : Colors.grey[600],
+                                      fontWeight: isUnread
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isUnread)
+                                  Container(
+                                    width: 10.w,
+                                    height: 10.w,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

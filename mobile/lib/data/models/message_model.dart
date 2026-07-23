@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../services/api_service.dart';
 
 class MessageModel {
@@ -11,6 +12,7 @@ class MessageModel {
   final int voiceDuration;
   final bool isRead;
   final DateTime createdAt;
+  final String? senderDonorLevel;
 
   MessageModel({
     required this.id,
@@ -23,17 +25,27 @@ class MessageModel {
     this.voiceDuration = 0,
     required this.isRead,
     required this.createdAt,
+    this.senderDonorLevel,
   });
 
   bool get isVoiceMessage => messageType == 'voice' || (attachmentUrl != null && attachmentUrl!.isNotEmpty);
 
   String? get fullVoiceUrl {
     if (attachmentUrl == null || attachmentUrl!.isEmpty) return null;
-    if (attachmentUrl!.startsWith('http://') || attachmentUrl!.startsWith('https://')) {
-      return attachmentUrl;
+    
+    String url = attachmentUrl!;
+    try {
+      if (Platform.isAndroid) {
+        url = url.replaceAll('127.0.0.1:8000', '10.0.2.2:8000')
+                 .replaceAll('localhost:8000', '10.0.2.2:8000');
+      }
+    } catch (_) {}
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
     }
     final server = ApiService.serverBaseUrl;
-    final path = attachmentUrl!.startsWith('/') ? attachmentUrl! : '/$attachmentUrl';
+    final path = url.startsWith('/') ? url! : '/$url';
     return '$server$path';
   }
 
@@ -49,6 +61,7 @@ class MessageModel {
       voiceDuration: json['voice_duration'] ?? 0,
       isRead: json['is_read'] ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      senderDonorLevel: json['sender_donor_level'] ?? json['senderDonorLevel'],
     );
   }
 

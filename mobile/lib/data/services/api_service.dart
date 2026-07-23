@@ -1,11 +1,16 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static String get baseUrl {
     // 10.0.2.2 is the special IP address to reach the host's localhost from Android emulator
+    if (kIsWeb) {
+      return 'http://127.0.0.1:8000/api';
+    }
     try {
       if (Platform.isAndroid) {
         return 'http://10.0.2.2:8000/api';
@@ -94,13 +99,22 @@ class ApiService {
     return await _dio.post(path, data: formData);
   }
 
-  Future<Response> uploadProfilePicture(File file) async {
-    final fileName = file.path.split(Platform.pathSeparator).last;
-    final formData = FormData.fromMap({
-      'profile_picture': await MultipartFile.fromFile(
+  Future<Response> uploadProfilePicture(XFile file) async {
+    final fileName = file.path.split('/').last.split(r'\').last;
+    MultipartFile multipartFile;
+    if (kIsWeb) {
+      multipartFile = MultipartFile.fromBytes(
+        await file.readAsBytes(),
+        filename: fileName,
+      );
+    } else {
+      multipartFile = await MultipartFile.fromFile(
         file.path,
         filename: fileName,
-      ),
+      );
+    }
+    final formData = FormData.fromMap({
+      'profile_picture': multipartFile,
     });
     return await _dio.post('/users/profile-picture/', data: formData);
   }

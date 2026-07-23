@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -127,7 +127,7 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel> uploadProfilePicture(File file) async {
+  Future<UserModel> uploadProfilePicture(XFile file) async {
     try {
       final response = await _apiService.uploadProfilePicture(file);
       return UserModel.fromJson(response.data);

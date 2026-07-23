@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../services/api_service.dart';
 
 class ContactModel {
@@ -17,6 +18,7 @@ class ContactModel {
   final bool isEligible;
   final String? donorCode;
   final String? medicalConditions;
+  final String? donorLevel;
 
   ContactModel({
     required this.id,
@@ -35,15 +37,25 @@ class ContactModel {
     this.isEligible = true,
     this.donorCode,
     this.medicalConditions,
+    this.donorLevel,
   });
 
   String? get fullProfilePictureUrl {
     if (profilePicture == null || profilePicture!.isEmpty) return null;
-    if (profilePicture!.startsWith('http://') || profilePicture!.startsWith('https://')) {
-      return profilePicture;
+    
+    String url = profilePicture!;
+    try {
+      if (Platform.isAndroid) {
+        url = url.replaceAll('127.0.0.1:8000', '10.0.2.2:8000')
+                 .replaceAll('localhost:8000', '10.0.2.2:8000');
+      }
+    } catch (_) {}
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
     }
     final server = ApiService.serverBaseUrl;
-    final path = profilePicture!.startsWith('/') ? profilePicture : '/$profilePicture';
+    final path = url.startsWith('/') ? url : '/$url';
     return '$server$path';
   }
 
@@ -83,6 +95,7 @@ class ContactModel {
       isEligible: json['is_eligible'] ?? true,
       donorCode: json['donor_code'] ?? json['donorCode'],
       medicalConditions: json['medical_conditions'] ?? json['medicalConditions'],
+      donorLevel: json['donor_level'] ?? json['donorLevel'] ?? json['user']?['donor_level'],
     );
   }
 }

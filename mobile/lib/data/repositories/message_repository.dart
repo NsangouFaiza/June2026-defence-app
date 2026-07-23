@@ -1,5 +1,7 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart' show XFile;
 import '../services/api_service.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
@@ -57,14 +59,23 @@ class MessageRepository {
     }
   }
 
-  Future<MessageModel> sendVoiceMessage(int conversationId, File voiceFile, int duration) async {
+  Future<MessageModel> sendVoiceMessage(int conversationId, XFile voiceFile, int duration) async {
     try {
-      final fileName = voiceFile.path.split(Platform.pathSeparator).last;
-      final formData = FormData.fromMap({
-        'voice_file': await MultipartFile.fromFile(
+      final fileName = voiceFile.path.split('/').last.split(r'\').last;
+      MultipartFile multipartFile;
+      if (kIsWeb) {
+        multipartFile = MultipartFile.fromBytes(
+          await voiceFile.readAsBytes(),
+          filename: fileName,
+        );
+      } else {
+        multipartFile = await MultipartFile.fromFile(
           voiceFile.path,
           filename: fileName,
-        ),
+        );
+      }
+      final formData = FormData.fromMap({
+        'voice_file': multipartFile,
         'voice_duration': duration,
         'content': '🎤 Voice Message',
         'message_type': 'voice',
@@ -85,6 +96,14 @@ class MessageRepository {
       await _apiService.post('/messages/conversations/$conversationId/mark-read/');
     } catch (e) {
       throw Exception('Failed to mark messages as read: $e');
+    }
+  }
+
+  Future<void> deleteConversation(int conversationId) async {
+    try {
+      await _apiService.delete('/messages/conversations/$conversationId/');
+    } catch (e) {
+      throw Exception('Failed to delete conversation: $e');
     }
   }
 

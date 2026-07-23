@@ -43,10 +43,11 @@ import 'features/lab/screens/lab_dashboard_screen.dart';
 import 'features/payment/screens/payment_screen.dart';
 import 'core/providers/theme_provider.dart';
 import 'features/patient/screens/blood_requests_list_screen.dart';
-import 'features/donor/screens/digital_donor_card_screen.dart';
+import 'features/donor/screens/digital_donor_badge_screen.dart';
 import 'features/donor/screens/health_records_screen.dart';
 import 'features/payment/screens/hospital_subscription_payment_screen.dart';
 import 'features/hospital/screens/hospital_subscription_history_screen.dart';
+import 'features/payment/screens/receipt_history_screen.dart';
 import 'core/widgets/role_guard.dart';
 
 void main() {
@@ -138,7 +139,7 @@ class LifeLinkApp extends ConsumerWidget {
             '/admin-panel': (context) => const RoleGuard(allowedRoles: ['system_admin', 'blood_bank_admin'], child: AdminPanelScreen()),
             '/eligibility-check': (context) => const EligibilityCheckScreen(),
             '/donation-history': (context) => const DonationHistoryScreen(),
-            '/digital-donor-card': (context) => const DigitalDonorCardScreen(),
+            '/digital-donor-badge': (context) => const DigitalDonorBadgeScreen(),
             '/health-records': (context) => const HealthRecordsScreen(),
             '/payment': (context) {
               final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -161,6 +162,7 @@ class LifeLinkApp extends ConsumerWidget {
                 hospitalId: args?['hospitalId'] as int?,
               );
             },
+            '/payment-history': (context) => const ReceiptHistoryScreen(),
           },
         );
       },

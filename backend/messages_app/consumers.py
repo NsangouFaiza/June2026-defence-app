@@ -59,6 +59,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         event_type = payload.get('type', 'message')
 
         if event_type == 'message':
+            message_id = payload.get('message_id')
+            if message_id:
+                # The message was already created (e.g. via HTTP send-voice).
+                # Fetch and broadcast it directly.
+                message = await self.get_serialized_message(message_id)
+                if message:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'chat_message',
+                            'message': message,
+                        },
+                    )
+                return
+
             content = payload.get('content', '').strip()
             if not content:
                 return
@@ -98,6 +113,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return Conversation.objects.filter(pk=conversation_id, participants__id=user_id).exists()
 
     @database_sync_to_async
+    def get_serialized_message(self, message_id):
+        try:
+            message = Message.objects.get(pk=message_id)
+            # Clear deleted_by status when active in conversation
+            message.conversation.deleted_by.clear()
+            message.conversation.save()
+            return {
+                'id': message.id,
+                'conversation': message.conversation.id,
+                'conversation_id': message.conversation.id,
+                'sender': message.sender.id,
+                'sender_id': message.sender.id,
+                'sender_name': message.sender.full_name,
+                'content': message.content,
+                'attachment': message.attachment.url if message.attachment else None,
+                'message_type': message.message_type,
+                'voice_duration': message.voice_duration,
+                'is_read': message.is_read,
+                'created_at': message.created_at.isoformat(),
+                'sender_donor_level': message.sender.donor_profile.level if (message.sender.role == 'donor' and hasattr(message.sender, 'donor_profile')) else None,
+            }
+        except Message.DoesNotExist:
+            return None
+
+    @database_sync_to_async
     def create_message(self, content):
         conversation = Conversation.objects.get(pk=self.conversation_id)
         message = Message.objects.create(
@@ -105,6 +145,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender=self.user,
             content=content,
         )
+        conversation.deleted_by.clear()
+        conversation.save()
         return {
             'id': message.id,
             'conversation': conversation.id,
@@ -118,6 +160,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'voice_duration': message.voice_duration,
             'is_read': message.is_read,
             'created_at': message.created_at.isoformat(),
+            'sender_donor_level': self.user.donor_profile.level if (self.user.role == 'donor' and hasattr(self.user, 'donor_profile')) else None,
         }
 
     @database_sync_to_async

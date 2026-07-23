@@ -5,15 +5,21 @@ from .models import Conversation, Message
 class MessageSerializer(serializers.ModelSerializer):
     sender_email = serializers.EmailField(source='sender.email', read_only=True)
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
+    sender_donor_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = [
             'id', 'conversation', 'sender', 'sender_email', 'sender_name',
             'content', 'attachment', 'message_type', 'voice_duration',
-            'is_read', 'read_at', 'created_at'
+            'is_read', 'read_at', 'created_at', 'sender_donor_level'
         ]
         read_only_fields = ['created_at']
+
+    def get_sender_donor_level(self, obj):
+        if obj.sender.role == 'donor' and hasattr(obj.sender, 'donor_profile'):
+            return obj.sender.donor_profile.level
+        return None
 
 
 class ConversationSerializer(serializers.ModelSerializer):

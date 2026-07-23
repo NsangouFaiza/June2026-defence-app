@@ -527,9 +527,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
     final isDonor = !isPatient && !isStaff;
     final localization = ref.watch(localizationServiceProvider);
 
-    final showPayButton = isPatient && request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PENDING';
+    final showPayButton = isPatient && request.paymentStatus.toUpperCase() == 'PENDING' && request.fulfillmentType == 'INVENTORY';
     final showStaffActions = isStaff && request.status.toUpperCase() == 'PENDING';
-    final showFulfillAction = isStaff && request.status.toUpperCase() == 'APPROVED';
+    final showFulfillAction = isStaff && (request.status.toUpperCase() == 'APPROVED' || request.status.toUpperCase() == 'CONFIRMED');
     final showDonateAction = isDonor && request.status.toUpperCase() == 'PENDING';
 
     return Container(
@@ -692,6 +692,36 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
             ),
           ],
 
+          if (request.fulfillmentType == 'INVENTORY') ...[
+            SizedBox(height: 8.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: Colors.blue.withOpacity(0.12)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long_rounded, color: Colors.blue.shade700, size: 14.sp),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      request.paymentStatus.toUpperCase() == 'PAID'
+                          ? 'Invoice Paid (25 FCFA) - Ref: ${request.paymentReference ?? "N/A"}'
+                          : 'Invoice Generated: 25 FCFA Fee Pending',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           if (request.fulfillmentType == 'DIRECT_DONATION') ...[
             SizedBox(height: 12.h),
             Container(
@@ -769,7 +799,7 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Payment: PENDING',
+                  'Payment: PENDING (25 FCFA)',
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: AppTheme.warning,
@@ -782,7 +812,7 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       '/payment',
                       arguments: {
                         'requestId': request.id,
-                        'amount': request.quantity * 15000.0,
+                        'amount': 25.0,
                       },
                     );
                   },
@@ -797,7 +827,7 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                 ),
               ],
             ),
-          ] else if (isPatient && request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PAID') ...[
+          ] else if (isPatient && request.paymentStatus.toUpperCase() == 'PAID') ...[
             const Divider(height: 24, thickness: 1),
             Row(
               children: [
@@ -837,10 +867,16 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  request.paymentStatus.toUpperCase() == 'PAID' ? 'Paid & Approved' : 'Payment: PENDING',
+                  request.status.toUpperCase() == 'CONFIRMED'
+                      ? 'Paid & Confirmed'
+                      : request.paymentStatus.toUpperCase() == 'PAID'
+                          ? 'Approved (Free)'
+                          : 'Payment: PENDING',
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: request.paymentStatus.toUpperCase() == 'PAID' ? AppTheme.success : AppTheme.warning,
+                    color: (request.paymentStatus.toUpperCase() == 'PAID' || request.status.toUpperCase() == 'CONFIRMED')
+                        ? AppTheme.success
+                        : AppTheme.warning,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -888,6 +924,8 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
         return AppTheme.warning;
       case 'approved':
         return AppTheme.success;
+      case 'confirmed':
+        return const Color(0xFF2E7D32); // Deep Green
       case 'rejected':
         return AppTheme.error;
       case 'fulfilled':
@@ -903,6 +941,8 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
         return Icons.pending_actions_outlined;
       case 'approved':
         return Icons.verified_user_outlined;
+      case 'confirmed':
+        return Icons.check_circle_rounded;
       case 'rejected':
         return Icons.cancel_outlined;
       case 'fulfilled':

@@ -11,6 +11,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Check hospital staff subscription status
         if self.user.role == 'hospital_staff':
+            from payments.models import check_and_update_subscriptions, verify_pending_payments
+            try:
+                from hospitals.models import HospitalStaff
+                staff = HospitalStaff.objects.filter(user=self.user).first()
+                if staff and staff.hospital:
+                    verify_pending_payments(hospital=staff.hospital)
+                check_and_update_subscriptions()
+            except Exception:
+                pass
             from hospitals.models import HospitalStaff
             try:
                 staff = HospitalStaff.objects.get(user=self.user)
@@ -41,6 +50,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
 
+    donor_level = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -48,9 +59,14 @@ class UserSerializer(serializers.ModelSerializer):
             'blood_group', 'phone_number', 'address', 'city', 'region',
             'role', 'notification_preferences', 'email_notifications',
             'language', 'profile_picture', 'is_verified', 'is_active',
-            'date_joined',
+            'date_joined', 'donor_level',
         ]
         read_only_fields = ['id', 'is_verified', 'date_joined']
+
+    def get_donor_level(self, obj):
+        if obj.role == 'donor' and hasattr(obj, 'donor_profile'):
+            return obj.donor_profile.level
+        return None
 
 
 class RegisterSerializer(serializers.ModelSerializer):

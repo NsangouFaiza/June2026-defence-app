@@ -241,3 +241,10 @@ GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
 CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='')
 CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='')
 CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='')
+
+# Campay Settings
+CAMPAY_USERNAME = config('CAMPAY_USERNAME', default='')
+CAMPAY_PASSWORD = config('CAMPAY_PASSWORD', default='')
+CAMPAY_TOKEN = config('CAMPAY_TOKEN', default='')
+CAMPAY_ENVIRONMENT = config('CAMPAY_ENVIRONMENT', default='sandbox')
+

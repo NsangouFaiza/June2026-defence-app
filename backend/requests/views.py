@@ -59,6 +59,12 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def my_requests(self, request):
         """Get current patient's requests."""
+        from payments.models import verify_pending_payments
+        try:
+            verify_pending_payments(user=request.user)
+        except Exception:
+            pass
+
         from patients.models import Patient
         patient, _ = Patient.objects.get_or_create(user=request.user)
         queryset = BloodRequest.objects.filter(patient=patient)
@@ -96,31 +102,40 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                     {'error': f"Insufficient inventory: Only {total_available} unit(s) of {blood_request.blood_group} blood available, but {blood_request.quantity} unit(s) requested."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-                
-            # Decrement from inventory
-            remaining_to_deduct = blood_request.quantity
-            matching_inventories = BloodInventory.objects.filter(
-                hospital=blood_request.hospital,
-                blood_group=blood_request.blood_group,
-                status='available'
-            ).order_by('expiration_date')
             
-            for inv in matching_inventories:
-                if remaining_to_deduct <= 0:
-                    break
-                if inv.quantity >= remaining_to_deduct:
-                    inv.quantity -= remaining_to_deduct
-                    if inv.quantity == 0:
-                        inv.status = 'used'
-                    inv.save()
-                    remaining_to_deduct = 0
-                else:
-                    remaining_to_deduct -= inv.quantity
-                    inv.quantity = 0
-                    inv.status = 'used'
-                    inv.save()
-                    
-        if fulfillment_type == 'DIRECT_DONATION':
+            # Do NOT decrement inventory immediately. Mark fulfillment type and keep PENDING
+            blood_request.status = 'PENDING'
+            blood_request.payment_status = 'PENDING'
+            blood_request.fulfillment_type = 'INVENTORY'
+            blood_request.donor = None
+            blood_request.processed_by = request.user
+            blood_request.save()
+            
+            # Create a 25 FCFA Payment request / invoice
+            from payments.models import Payment
+            from django.utils import timezone
+            transaction_id = f'INV-{blood_request.patient.user.id}-{blood_request.id}-{timezone.now().timestamp():.0f}'
+            Payment.objects.create(
+                user=blood_request.patient.user,
+                blood_request=blood_request,
+                amount=25.0,
+                payment_method='MTN_MOMO', # Default MoMo payment channel
+                transaction_id=transaction_id,
+                status='PENDING',
+            )
+            
+            # Save history log
+            from audit.models import AuditLog
+            AuditLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                model_name='BloodRequest',
+                object_id=str(blood_request.id),
+                description=f"Staff classified blood request from inventory. Invoice {transaction_id} generated for 25 FCFA.",
+                changes={'fulfillment_type': 'INVENTORY', 'status': 'PENDING', 'payment_status': 'PENDING'}
+            )
+            
+        else: # DIRECT_DONATION
             donor_id = request.data.get('donor_id')
             if donor_id:
                 from donors.models import Donor
@@ -130,13 +145,24 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Invalid donor ID'}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 blood_request.donor = None
-        else:
-            blood_request.donor = None
+                
+            blood_request.status = 'APPROVED'
+            blood_request.payment_status = 'PAID' # Free direct donation
+            blood_request.fulfillment_type = 'DIRECT_DONATION'
+            blood_request.processed_by = request.user
+            blood_request.save()
+            
+            # Save history log
+            from audit.models import AuditLog
+            AuditLog.objects.create(
+                user=request.user,
+                action='APPROVE',
+                model_name='BloodRequest',
+                object_id=str(blood_request.id),
+                description="Staff approved blood request as direct donation (free).",
+                changes={'fulfillment_type': 'DIRECT_DONATION', 'status': 'APPROVED', 'payment_status': 'PAID'}
+            )
 
-        blood_request.status = 'APPROVED'
-        blood_request.fulfillment_type = fulfillment_type
-        blood_request.save()
-        
         serializer = self.get_serializer(blood_request)
         return Response(serializer.data)
 

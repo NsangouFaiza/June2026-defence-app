@@ -411,6 +411,16 @@ class ProfileSettingsScreen extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
+
+    // Request permissions first
+    try {
+      if (source == ImageSource.camera) {
+        await PermissionService.requestCameraPermission(context);
+      } else {
+        await PermissionService.requestPhotosPermission(context);
+      }
+    } catch (_) {}
+
     messenger.showSnackBar(
       SnackBar(
         content: Text(source == ImageSource.camera ? 'Opening Camera...' : 'Opening Gallery...'),
@@ -429,7 +439,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
 
       if (picked != null) {
         if (context.mounted) {
-          await _uploadImage(context, ref, File(picked.path));
+          await _uploadImage(context, ref, picked);
         }
       } else {
         if (context.mounted) {
@@ -442,20 +452,12 @@ class ProfileSettingsScreen extends ConsumerWidget {
     } on PlatformException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        if (e.code.toLowerCase().contains('permission') || e.code.toLowerCase().contains('access_denied')) {
-          if (source == ImageSource.camera) {
-            await PermissionService.requestCameraPermission(context);
-          } else {
-            await PermissionService.requestPhotosPermission(context);
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open ${source == ImageSource.camera ? "camera" : "gallery"}: ${e.message ?? e.code}'),
-              backgroundColor: AppTheme.error,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open ${source == ImageSource.camera ? "camera" : "gallery"}: ${e.message ?? e.code}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -470,7 +472,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _uploadImage(BuildContext context, WidgetRef ref, File file) async {
+  Future<void> _uploadImage(BuildContext context, WidgetRef ref, XFile file) async {
     try {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

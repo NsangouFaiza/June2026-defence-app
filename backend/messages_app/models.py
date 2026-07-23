@@ -16,6 +16,7 @@ class UserPresence(models.Model):
 
 class Conversation(models.Model):
     participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='conversations')
+    deleted_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='deleted_conversations', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

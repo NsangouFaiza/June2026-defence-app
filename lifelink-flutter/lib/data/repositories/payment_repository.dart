@@ -7,18 +7,45 @@ class PaymentRepository {
 
   Future<PaymentModel> initiatePayment(Map<String, dynamic> data) async {
     try {
+      print("--- Outgoing Payment Request from Flutter to Django ---");
+      print("URL: /payments/initiate/");
+      print("Payload: $data");
+      
       final response = await _apiService.post('/payments/initiate/', data);
       return PaymentModel.fromJson(response.data);
     } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          if (respData.containsKey('error')) {
+            throw Exception(respData['error']);
+          } else if (respData.containsKey('detail')) {
+            throw Exception(respData['detail']);
+          }
+        }
+      }
       throw Exception('Failed to initiate payment: $e');
     }
   }
 
   Future<PaymentModel> getPaymentStatus(int paymentId) async {
     try {
+      print("--- Outgoing Payment Status Request from Flutter to Django ---");
+      print("URL: /payments/$paymentId/status/");
+      
       final response = await _apiService.get('/payments/$paymentId/status/');
       return PaymentModel.fromJson(response.data);
     } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          if (respData.containsKey('error')) {
+            throw Exception(respData['error']);
+          } else if (respData.containsKey('detail')) {
+            throw Exception(respData['detail']);
+          }
+        }
+      }
       throw Exception('Failed to get payment status: $e');
     }
   }
@@ -33,11 +60,26 @@ class PaymentRepository {
       throw Exception('Failed to load payment history: $e');
     }
   }
+  
   Future<Map<String, dynamic>> payHospitalSubscription(Map<String, dynamic> data) async {
     try {
+      print("--- Outgoing Payment Request from Flutter to Django ---");
+      print("URL: /hospitals/pay_subscription/");
+      print("Payload: $data");
+      
       final response = await _apiService.post('/hospitals/pay_subscription/', data);
       return response.data as Map<String, dynamic>;
     } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          if (respData.containsKey('error')) {
+            throw Exception(respData['error']);
+          } else if (respData.containsKey('detail')) {
+            throw Exception(respData['detail']);
+          }
+        }
+      }
       throw Exception('Failed to process hospital subscription payment: $e');
     }
   }

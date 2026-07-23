@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../services/api_service.dart';
 
 class UserModel {
@@ -17,6 +18,7 @@ class UserModel {
   final bool? emailNotifications;
   final String language;
   final String? profilePicture;
+  final String? donorLevel;
   final DateTime? createdAt;
 
   UserModel({
@@ -36,16 +38,26 @@ class UserModel {
     this.emailNotifications,
     this.language = 'en',
     this.profilePicture,
+    this.donorLevel,
     this.createdAt,
   });
 
   String? get fullProfilePictureUrl {
     if (profilePicture == null || profilePicture!.isEmpty) return null;
-    if (profilePicture!.startsWith('http://') || profilePicture!.startsWith('https://')) {
-      return profilePicture;
+    
+    String url = profilePicture!;
+    try {
+      if (Platform.isAndroid) {
+        url = url.replaceAll('127.0.0.1:8000', '10.0.2.2:8000')
+                 .replaceAll('localhost:8000', '10.0.2.2:8000');
+      }
+    } catch (_) {}
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
     }
     final server = ApiService.serverBaseUrl;
-    final path = profilePicture!.startsWith('/') ? profilePicture : '/$profilePicture';
+    final path = url.startsWith('/') ? url : '/$url';
     return '$server$path';
   }
 
@@ -69,6 +81,7 @@ class UserModel {
       emailNotifications: json['email_notifications'],
       language: json['language'] ?? 'en',
       profilePicture: json['profile_picture'] ?? json['profilePicture'],
+      donorLevel: json['donor_level'] ?? json['donorLevel'],
       createdAt: json['date_joined'] != null
           ? DateTime.parse(json['date_joined'])
           : json['created_at'] != null
@@ -95,6 +108,7 @@ class UserModel {
       'email_notifications': emailNotifications,
       'language': language,
       'profile_picture': profilePicture,
+      'donor_level': donorLevel,
     };
   }
 }

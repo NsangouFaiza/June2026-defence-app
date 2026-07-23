@@ -122,7 +122,7 @@ class LeaderboardScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                         child: Text(
-                          donor.badge!,
+                          _getBadgeWithEmoji(donor.badge!),
                           style: TextStyle(
                             fontSize: 10.sp,
                             color: AppTheme.warning,
@@ -223,6 +223,21 @@ class LeaderboardScreen extends ConsumerWidget {
         return Colors.brown;
       default:
         return AppTheme.primaryColor;
+    }
+  }
+
+  String _getBadgeWithEmoji(String badge) {
+    switch (badge.toLowerCase()) {
+      case 'platinum':
+        return '💎 Platinum';
+      case 'gold':
+        return '🥇 Gold';
+      case 'silver':
+        return '🥈 Silver';
+      case 'bronze':
+        return '🥉 Bronze';
+      default:
+        return badge;
     }
   }
 }

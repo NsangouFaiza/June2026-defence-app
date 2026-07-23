@@ -4,6 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
 
 from .models import Donor, DonorHealthRecord
 from .serializers import DonorSerializer, DonorDetailSerializer, DonorHealthRecordSerializer
@@ -173,4 +175,166 @@ class DonorHealthRecordViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Donor.DoesNotExist:
             return Response([])
+
+
+def verify_badge_view(request, donor_code):
+    """Public view to verify digital donor badge validity."""
+    try:
+        # Code format: DON-2026-XXXX where XXXX is 4-digit ID
+        parts = donor_code.split('-')
+        donor_id = int(parts[-1])
+        donor = get_object_or_404(Donor, id=donor_id)
+    except Exception:
+        return HttpResponse("<h1>Invalid Donor Code</h1>", status=400)
+
+    badge_level = donor.level
+    badge_emoji = '🥉'
+    if badge_level == 'Platinum':
+        badge_emoji = '💎'
+    elif badge_level == 'Gold':
+        badge_emoji = '🥇'
+    elif badge_level == 'Silver':
+        badge_emoji = '🥈'
+
+    is_valid = donor.user.is_active and donor.total_donations > 0
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>LifeLink Donor Badge Verification</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Outfit', sans-serif;
+                background-color: #F5F7FA;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }}
+            .card {{
+                background-color: white;
+                border-radius: 24px;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+                padding: 35px;
+                width: 90%;
+                max-width: 420px;
+                text-align: center;
+                border: 1px solid #E9ECEF;
+            }}
+            .logo {{
+                font-size: 26px;
+                font-weight: 800;
+                color: #E53935;
+                margin-bottom: 24px;
+                letter-spacing: 0.5px;
+            }}
+            .badge-container {{
+                font-size: 80px;
+                margin: 25px 0;
+                filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
+            }}
+            .status-box {{
+                display: inline-block;
+                padding: 10px 20px;
+                border-radius: 50px;
+                font-weight: 700;
+                font-size: 13px;
+                letter-spacing: 0.8px;
+                margin-bottom: 25px;
+            }}
+            .valid {{
+                background-color: #E8F5E9;
+                color: #2E7D32;
+                border: 1px solid #C8E6C9;
+            }}
+            .invalid {{
+                background-color: #FFEBEE;
+                color: #C62828;
+                border: 1px solid #FFCDD2;
+            }}
+            .name {{
+                font-size: 24px;
+                font-weight: 700;
+                color: #212529;
+                margin-bottom: 6px;
+            }}
+            .id-code {{
+                font-size: 15px;
+                color: #6C757D;
+                margin-bottom: 30px;
+                font-weight: 500;
+            }}
+            .info-grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                border-top: 1px solid #F1F3F5;
+                padding-top: 25px;
+                text-align: left;
+            }}
+            .info-label {{
+                font-size: 11px;
+                color: #868E96;
+                text-transform: uppercase;
+                letter-spacing: 0.6px;
+                margin-bottom: 5px;
+            }}
+            .info-value {{
+                font-size: 16px;
+                color: #343A40;
+                font-weight: 600;
+            }}
+            .footer {{
+                font-size: 12px;
+                color: #ADB5BD;
+                margin-top: 35px;
+                border-top: 1px solid #F1F3F5;
+                padding-top: 20px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="logo">🔴 LifeLink</div>
+            <div class="status-box {"valid" if is_valid else "invalid"}">
+                {"&checkmark; VERIFIED LIFELINK DONOR" if is_valid else "&cross; INVALID / NO DONATIONS LOGGED"}
+            </div>
+            <div class="badge-container">
+                {badge_emoji}
+            </div>
+            <div class="name">{donor.user.full_name}</div>
+            <div class="id-code">{donor.donor_code}</div>
+            
+            <div class="info-grid">
+                <div>
+                    <div class="info-label">Blood Group</div>
+                    <div class="info-value">{donor.user.blood_group or "Not Specified"}</div>
+                </div>
+                <div>
+                    <div class="info-label">Badge Level</div>
+                    <div class="info-value">{badge_level} Donor</div>
+                </div>
+                <div>
+                    <div class="info-label">Total Donations</div>
+                    <div class="info-value">{donor.total_donations}</div>
+                </div>
+                <div>
+                    <div class="info-label">Verification Date</div>
+                    <div class="info-value">{timezone.now().strftime('%Y-%m-%d')}</div>
+                </div>
+            </div>
+            <div class="footer">
+                Secured by LifeLink Verification System<br>
+                Checked at: {timezone.now().strftime('%H:%M:%S UTC')}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HttpResponse(html_content)
 

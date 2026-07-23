@@ -190,23 +190,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        InkWell(
-                          onTap: () => Navigator.of(context).pushNamed('/digital-donor-card'),
-                          child: Container(
-                            width: 42.w,
-                            height: 42.w,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.badge_outlined,
-                              color: Colors.white,
-                              size: 22.w,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
+
                         InkWell(
                           onTap: () => Navigator.of(context).pushNamed('/notifications'),
                           child: Container(
@@ -322,6 +306,30 @@ class DonorDashboardScreen extends ConsumerWidget {
               ),
               SliverToBoxAdapter(child: SizedBox(height: 24.h)),
 
+              // My Donor Badge Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MY DONOR BADGE',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildMyBadgeSection(context, donor),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+
               // Responsive 2-Column Grid of Action Cards
               SliverToBoxAdapter(
                 child: Padding(
@@ -369,11 +377,11 @@ class DonorDashboardScreen extends ConsumerWidget {
                             onTap: () => Navigator.of(context).pushNamed('/campaigns'),
                           ),
                           _buildActionCard(
-                            title: 'Digital Donor Card',
-                            description: 'QR check-in & donor ID details',
-                            icon: Icons.badge_rounded,
+                            title: 'My Donor Badge',
+                            description: 'Official credential certificate',
+                            icon: Icons.workspace_premium_rounded,
                             gradient: const [Color(0xFF8E24AA), Color(0xFF6A1B9A)],
-                            onTap: () => Navigator.of(context).pushNamed('/digital-donor-card'),
+                            onTap: () => Navigator.of(context).pushNamed('/digital-donor-badge'),
                           ),
                           _buildActionCard(
                             title: 'Health Records',
@@ -852,6 +860,119 @@ class DonorDashboardScreen extends ConsumerWidget {
               backgroundColor: Colors.grey[200],
               valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
               minHeight: 6.h,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyBadgeSection(BuildContext context, DonorModel donor) {
+    final hasDonated = donor.totalDonations > 0;
+    Color badgeColor = hasDonated ? const Color(0xFF8D6E63) : Colors.grey.shade600; // Bronze or Gray
+    String emoji = hasDonated ? '🥉' : '🔒';
+    List<Color> cardGradient = hasDonated 
+        ? [const Color(0xFFD7CCC8), const Color(0xFF8D6E63)]
+        : [Colors.grey.shade300, Colors.grey.shade500];
+
+    if (hasDonated) {
+      switch (donor.level.toLowerCase()) {
+        case 'platinum':
+          badgeColor = const Color(0xFF00ACC1);
+          emoji = '💎';
+          cardGradient = [const Color(0xFFE0F7FA), const Color(0xFF00ACC1)];
+          break;
+        case 'gold':
+          badgeColor = const Color(0xFFF57F17);
+          emoji = '🥇';
+          cardGradient = [const Color(0xFFFFE082), const Color(0xFFFFD54F)];
+          break;
+        case 'silver':
+          badgeColor = const Color(0xFF607D8B);
+          emoji = '🥈';
+          cardGradient = [const Color(0xFFECEFF1), const Color(0xFFB0BEC5)];
+          break;
+      }
+    }
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(color: badgeColor.withOpacity(0.2), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60.w,
+            height: 60.w,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: cardGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: badgeColor.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              emoji,
+              style: TextStyle(fontSize: 32.sp),
+            ),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasDonated ? 'Verified ${donor.level} Donor' : 'Donor Badge Pending',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  hasDonated ? 'Official Certificate Issued' : 'Complete 1st donation to unlock',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pushNamed('/digital-donor-badge'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              elevation: 0,
+            ),
+            child: Text(
+              hasDonated ? 'View Badge' : 'Open Draft',
+              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
             ),
           ),
         ],

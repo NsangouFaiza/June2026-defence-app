@@ -56,6 +56,7 @@ class RewardActionViewSet(viewsets.ViewSet):
                 'name': d.user.full_name,
                 'points': d.points,
                 'level': d.level,
+                'badge': d.level,
                 'total_donations': d.total_donations,
             })
         return Response(data)

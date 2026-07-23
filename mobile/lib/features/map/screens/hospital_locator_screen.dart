@@ -311,7 +311,7 @@ class _HospitalLocatorScreenState extends ConsumerState<HospitalLocatorScreen> {
   }
 
   Future<void> _checkPermissionAndGetLocation() async {
-    await _fetchUserLocationSilently();
+    await _requestAndFetchUserLocation();
     if (_userPosition != null) {
       _computeDistances(_allHospitals);
       setState(() {

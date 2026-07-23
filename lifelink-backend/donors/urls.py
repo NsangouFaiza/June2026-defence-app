@@ -7,5 +7,6 @@ router.register(r'health-records', views.DonorHealthRecordViewSet, basename='hea
 router.register(r'', views.DonorViewSet)
 
 urlpatterns = [
+    path('verify-badge/<str:donor_code>/', views.verify_badge_view, name='verify_badge'),
     path('', include(router.urls)),
 ]

@@ -56,11 +56,11 @@ class Donation(models.Model):
             
             donor.points = donor.total_donations * 50
             
-            if donor.points >= 500:
+            if donor.total_donations >= 20:
                 donor.level = 'Platinum'
-            elif donor.points >= 400:
+            elif donor.total_donations >= 10:
                 donor.level = 'Gold'
-            elif donor.points >= 250:
+            elif donor.total_donations >= 5:
                 donor.level = 'Silver'
             else:
                 donor.level = 'Bronze'

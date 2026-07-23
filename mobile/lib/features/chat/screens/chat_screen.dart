@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File, WebSocket;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/providers.dart';
@@ -213,13 +215,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
       if (!hasPermission) return;
 
-      final tempDir = await getTemporaryDirectory();
-      final path = '${tempDir.path}/vn_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: path,
-      );
+      String path;
+      if (kIsWeb) {
+        path = '';
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path,
+        );
+      } else {
+        final tempDir = await getTemporaryDirectory();
+        path = '${tempDir.path}/vn_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path,
+        );
+      }
 
       if (mounted) {
         setState(() {
@@ -278,13 +288,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _previewPlayer!.dispose();
       _previewPlayer = null;
     }
-    if (_recordedPath != null) {
-      final file = File(_recordedPath!);
-      if (await file.exists()) {
-        try {
+    if (_recordedPath != null && _recordedPath!.isNotEmpty && !kIsWeb) {
+      try {
+        final file = File(_recordedPath!);
+        if (await file.exists()) {
           await file.delete();
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
     setState(() {
       _isRecording = false;
@@ -334,8 +344,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     if (path == null) return;
-    final file = File(path);
-    if (!await file.exists()) return;
 
     if (_previewPlayer != null) {
       await _previewPlayer!.stop();
@@ -353,7 +361,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final messageRepo = ref.read(messageRepositoryProvider);
     try {
-      final message = await messageRepo.sendVoiceMessage(_conversationId!, file, duration);
+      final xfile = XFile(path);
+      final message = await messageRepo.sendVoiceMessage(_conversationId!, xfile, duration);
       setState(() {
         _messages.add(message);
       });
@@ -362,10 +371,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (_webSocket != null && _webSocket!.readyState == WebSocket.open) {
         _webSocket!.add(json.encode({
           'type': 'message',
-          'content': '🎤 Voice Message',
-          'attachment': message.attachmentUrl,
-          'message_type': 'voice',
-          'voice_duration': duration,
+          'message_id': message.id,
         }));
       }
     } catch (e) {
@@ -623,7 +629,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             if (!isMe)
               Text(
-                message.senderName,
+                '${message.senderName}${_getDonorLevelEmoji(message.senderDonorLevel)}',
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.bold,
@@ -669,5 +675,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _audioRecorder.dispose();
     _previewPlayer?.dispose();
     super.dispose();
+  }
+
+  String _getDonorLevelEmoji(String? level) {
+    if (level == null) return '';
+    switch (level.toLowerCase()) {
+      case 'platinum':
+        return ' 💎';
+      case 'gold':
+        return ' 🥇';
+      case 'silver':
+        return ' 🥈';
+      case 'bronze':
+        return ' 🥉';
+      default:
+        return '';
+    }
   }
 }

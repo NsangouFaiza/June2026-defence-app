@@ -5,6 +5,7 @@ from django.conf import settings
 REQUEST_STATUS_CHOICES = (
     ('PENDING', 'Pending'),
     ('APPROVED', 'Approved'),
+    ('CONFIRMED', 'Confirmed'),
     ('REJECTED', 'Rejected'),
     ('FULFILLED', 'Fulfilled'),
     ('CANCELLED', 'Cancelled'),

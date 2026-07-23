@@ -16,7 +16,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Conversation.objects.filter(participants=self.request.user)
+        return Conversation.objects.filter(participants=self.request.user).exclude(deleted_by=self.request.user)
 
     def create(self, request, *args, **kwargs):
         from django.contrib.auth import get_user_model
@@ -49,6 +49,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
         # Check existing conversation
         existing = Conversation.objects.filter(participants=request.user).filter(participants=other_user).first()
         if existing:
+            # If conversation was soft-deleted, restore it
+            if request.user in existing.deleted_by.all():
+                existing.deleted_by.remove(request.user)
+                existing.save()
             serializer = self.get_serializer(existing)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -58,10 +62,25 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(conversation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete a conversation for the current user."""
+        conversation = self.get_object()
+        conversation.deleted_by.add(request.user)
+        conversation.save()
+
+        # If all participants have deleted the conversation, delete it from DB entirely
+        participants = conversation.participants.all()
+        deleted_by_users = conversation.deleted_by.all()
+        if all(user in deleted_by_users for user in participants):
+            conversation.delete()
+            return Response({'status': 'deleted from database'}, status=status.HTTP_204_NO_CONTENT)
+
+        return Response({'status': 'conversation hidden for you'}, status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=False, methods=['get'])
     def list_conversations(self, request):
         """List current user's conversations."""
-        conversations = Conversation.objects.filter(participants=request.user)
+        conversations = Conversation.objects.filter(participants=request.user).exclude(deleted_by=request.user)
         serializer = self.get_serializer(conversations, many=True)
         return Response(serializer.data)
 
@@ -86,6 +105,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 message_type=message_type,
                 voice_duration=voice_duration,
             )
+            # Clear deleted_by since conversation is active again
+            conversation.deleted_by.clear()
             conversation.save()
             serializer = MessageSerializer(message, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -114,6 +135,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
             message_type='voice',
             voice_duration=duration,
         )
+        # Clear deleted_by since conversation is active again
+        conversation.deleted_by.clear()
         conversation.save()
         serializer = MessageSerializer(message, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)

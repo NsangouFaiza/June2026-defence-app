@@ -73,6 +73,14 @@ class HospitalViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Auto-verify any pending payments to refresh subscription status in real time
+        from payments.models import verify_pending_payments
+        try:
+            verify_pending_payments(hospital=hospital)
+            hospital.refresh_from_db()
+        except Exception:
+            pass
+
         from inventory.models import BloodInventory
         from appointments.models import Appointment
         from requests.models import BloodRequest
@@ -105,7 +113,11 @@ class HospitalViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def pay_subscription(self, request):
-        """Process monthly hospital subscription payment (25 FCFA / month)."""
+        """Process monthly hospital subscription payment (25 FCFA / month) via Campay."""
+        print("--- Complete Request Received by Django (/api/hospitals/pay_subscription/) ---", flush=True)
+        print(f"User: {request.user} (ID: {request.user.id if request.user else 'Anonymous'})", flush=True)
+        print(f"Payload: {request.data}", flush=True)
+
         hospital_id = request.data.get('hospital_id')
         amount_raw = request.data.get('amount', 25)
         payment_method = request.data.get('payment_method', 'MTN_MOMO')
@@ -131,76 +143,41 @@ class HospitalViewSet(viewsets.ModelViewSet):
         if not hospital:
             return Response({'error': 'Hospital identifier required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        months = max(1, int(amount // 25))
+        from payments.models import Payment
+        from payments.services import get_payment_provider
+        from payments.serializers import PaymentSerializer
+
         now = timezone.now()
-        start_date = hospital.subscription_end_date if (hospital.subscription_end_date and hospital.subscription_end_date > now) else now
-        end_date = start_date + timedelta(days=30 * months)
-
         txn_id = f"TXN-SUB-{hospital.id}-{int(now.timestamp())}"
-        inv_num = f"INV-HOSP-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
-
         user_obj = request.user if request.user.is_authenticated else None
 
-        payment = HospitalSubscriptionPayment.objects.create(
+        payment = Payment.objects.create(
+            user=user_obj or User.objects.filter(role='system_admin').first() or User.objects.filter(is_superuser=True).first(),
             hospital=hospital,
-            staff_user=user_obj,
+            payment_type='HOSPITAL_SUBSCRIPTION',
             amount=amount,
-            months=months,
             payment_method=payment_method,
-            status='SUCCESS',
+            status='PENDING',
+            payment_status='PENDING',
             transaction_id=txn_id,
-            invoice_number=inv_num,
             phone_number=phone_number,
-            paid_at=now,
-            subscription_period_start=start_date,
-            subscription_period_end=end_date,
-            response_data={
-                'provider': payment_method,
-                'status': 'SUCCESS',
-                'months_paid': months,
-            }
         )
 
-        # Extend hospital subscription
-        hospital.extend_subscription(months)
+        try:
+            provider = get_payment_provider(payment_method)
+            result = provider.initiate(payment.amount, phone_number, txn_id)
+            payment.transaction_reference = result.external_reference
+            payment.response_data = result.response_data
+            payment.status = result.status
+            payment.payment_status = result.status
+            payment.save()
+        except Exception as exc:
+            payment.delete()
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Notifications
-        # 1. Notify Staff member
-        if user_obj:
-            Notification.objects.create(
-                recipient=user_obj,
-                notification_type='HOSPITAL_SUBSCRIPTION',
-                title='Hospital Subscription Payment Successful',
-                message=f"Payment of {amount:,.0f} FCFA for {hospital.name} ({months} month(s)) was successful. Invoice #{inv_num}. Subscription valid until {end_date.strftime('%Y-%m-%d')}.",
-                data={
-                    'hospital_id': hospital.id,
-                    'invoice_number': inv_num,
-                    'amount': amount,
-                    'months': months,
-                }
-            )
-
-        # 2. Notify System Admins
-        admin_users = User.objects.filter(Q(role='system_admin') | Q(is_superuser=True))
-        for admin in admin_users:
-            Notification.objects.create(
-                recipient=admin,
-                notification_type='HOSPITAL_SUBSCRIPTION',
-                title='Hospital Subscription Received',
-                message=f"Hospital '{hospital.name}' paid {amount:,.0f} FCFA ({months} month(s)). Invoice #{inv_num}.",
-                data={
-                    'hospital_id': hospital.id,
-                    'invoice_number': inv_num,
-                    'amount': amount,
-                }
-            )
-
-        # 3. Broadcast notification to ALL users (Patients, Donors, Admins)
-        notify_all_users_new_hospital(hospital)
-
-        serializer = HospitalSubscriptionPaymentSerializer(payment)
+        serializer = PaymentSerializer(payment)
         return Response({
-            'message': 'Subscription payment successful',
+            'message': 'Subscription payment initiated',
             'payment': serializer.data,
             'hospital': HospitalSerializer(hospital).data
         }, status=status.HTTP_201_CREATED)
@@ -208,8 +185,21 @@ class HospitalViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def subscription_history(self, request):
         """Get payment history and invoices for a hospital."""
+        # Auto-verify pending payments first
+        from payments.models import verify_pending_payments
+        if request.user.is_authenticated:
+            try:
+                if request.user.role == 'system_admin' or request.user.is_staff:
+                    verify_pending_payments()
+                elif hasattr(request.user, 'hospital_staff'):
+                    verify_pending_payments(hospital=request.user.hospital_staff.hospital)
+            except Exception:
+                pass
+
         hospital_id = request.query_params.get('hospital_id')
-        queryset = HospitalSubscriptionPayment.objects.all()
+        from payments.models import Payment
+        from payments.serializers import PaymentSerializer
+        queryset = Payment.objects.filter(payment_type='HOSPITAL_SUBSCRIPTION')
 
         if hospital_id:
             queryset = queryset.filter(hospital_id=hospital_id)
@@ -218,7 +208,7 @@ class HospitalViewSet(viewsets.ModelViewSet):
         elif not (request.user.is_authenticated and (request.user.role == 'system_admin' or request.user.is_staff)):
             return Response([], status=status.HTTP_200_OK)
 
-        serializer = HospitalSubscriptionPaymentSerializer(queryset, many=True)
+        serializer = PaymentSerializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
@@ -227,39 +217,71 @@ class HospitalViewSet(viewsets.ModelViewSet):
         inv_num = request.query_params.get('invoice_number')
         payment_id = request.query_params.get('id')
 
+        from payments.models import Payment, Invoice
+        from payments.serializers import PaymentSerializer
+
         try:
             if inv_num:
-                payment = HospitalSubscriptionPayment.objects.get(invoice_number=inv_num)
+                invoice = Invoice.objects.select_related('payment__hospital').get(invoice_number=inv_num)
+                payment = invoice.payment
             elif payment_id:
-                payment = HospitalSubscriptionPayment.objects.get(id=payment_id)
+                payment = Payment.objects.get(id=payment_id)
             else:
                 return Response({'error': 'invoice_number or id required'}, status=status.HTTP_400_BAD_REQUEST)
-        except HospitalSubscriptionPayment.DoesNotExist:
+        except (Invoice.DoesNotExist, Payment.DoesNotExist):
             return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = HospitalSubscriptionPaymentSerializer(payment)
+        serializer = PaymentSerializer(payment)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def toggle_active(self, request, pk=None):
         """Admin toggle for hospital active/subscription access status."""
+        if not (request.user.is_staff or request.user.role == 'system_admin' or request.user.is_superuser):
+            return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
+
         hospital = self.get_object()
         action_type = request.data.get('action', 'toggle')
+
+        from payments.models import HospitalSubscription
+        from django.utils import timezone
+        from datetime import timedelta
+
+        sub, _ = HospitalSubscription.objects.get_or_create(
+            hospital=hospital,
+            defaults={
+                'start_date': timezone.now(),
+                'expiration_date': timezone.now() + timedelta(days=30),
+                'active_status': True
+            }
+        )
 
         if action_type == 'deactivate':
             hospital.is_active = False
             hospital.subscription_status = 'DEACTIVATED'
+            sub.active_status = False
+            sub.save()
         elif action_type == 'activate':
             hospital.is_active = True
             hospital.subscription_status = 'ACTIVE'
+            sub.active_status = True
+            if sub.expiration_date < timezone.now():
+                sub.expiration_date = timezone.now() + timedelta(days=30)
+            sub.save()
+            hospital.subscription_end_date = sub.expiration_date
             notify_all_users_new_hospital(hospital)
         else:
             hospital.is_active = not hospital.is_active
             hospital.subscription_status = 'ACTIVE' if hospital.is_active else 'DEACTIVATED'
+            sub.active_status = hospital.is_active
             if hospital.is_active:
+                if sub.expiration_date < timezone.now():
+                    sub.expiration_date = timezone.now() + timedelta(days=30)
+                hospital.subscription_end_date = sub.expiration_date
                 notify_all_users_new_hospital(hospital)
+            sub.save()
 
-        hospital.save(update_fields=['is_active', 'subscription_status', 'updated_at'])
+        hospital.save(update_fields=['is_active', 'subscription_status', 'subscription_end_date', 'updated_at'])
         return Response({
             'message': f"Hospital '{hospital.name}' status updated.",
             'hospital': HospitalSerializer(hospital).data
