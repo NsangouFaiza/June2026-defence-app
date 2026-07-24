@@ -60,52 +60,55 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       backgroundColor: AppTheme.primaryColor,
       body: SafeArea(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo
-              Container(
-                width: 160.w,
-                height: 160.w,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo
+                Container(
+                  width: 160.w,
+                  height: 160.w,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.all(16.w),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                padding: EdgeInsets.all(16.w),
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
+                SizedBox(height: 32.h),
+                Text(
+                  'LifeLink',
+                  style: TextStyle(
+                    fontSize: 48.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              SizedBox(height: 32.h),
-              Text(
-                'LifeLink',
-                style: TextStyle(
-                  fontSize: 48.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                SizedBox(height: 8.h),
+                Text(
+                  'Blood Donation & Management',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
                 ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                'Blood Donation & Management',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Colors.white.withOpacity(0.9),
+                SizedBox(height: 48.h),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
-              ),
-              SizedBox(height: 48.h),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

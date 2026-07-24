@@ -63,6 +63,7 @@ class _BloodSearchScreenState extends ConsumerState<BloodSearchScreen> {
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Blood Group',
                     isDense: true,

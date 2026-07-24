@@ -79,6 +79,34 @@ class DonorViewSet(viewsets.ModelViewSet):
         """Get current user's donor profile."""
         try:
             donor = Donor.objects.get(user=request.user)
+            
+            # Dynamically check and update eligibility and dispatch reminders
+            if donor.last_donation_date:
+                today = timezone.now().date()
+                next_eligible = donor.last_donation_date + timedelta(days=90)
+                if not donor.is_eligible and today >= next_eligible:
+                    donor.is_eligible = True
+                    donor.eligibility_status = 'eligible'
+                    donor.eligibility_reason = ''
+                    donor.next_eligible_date = next_eligible
+                    donor.save()
+                    
+                    # Create notification if not already sent since this last donation
+                    from notifications.models import Notification
+                    notification_exists = Notification.objects.filter(
+                        recipient=request.user,
+                        notification_type='ELIGIBILITY_REMINDER',
+                        created_at__date__gte=donor.last_donation_date
+                    ).exists()
+                    
+                    if not notification_exists:
+                        Notification.objects.create(
+                            recipient=request.user,
+                            notification_type='ELIGIBILITY_REMINDER',
+                            title='Eligible to Donate Again! / Éligible pour donner à nouveau !',
+                            message='Congratulations! 90 days have passed since your last validated blood donation. You are now eligible to donate blood again and save more lives. / Félicitations ! 90 jours se sont écoulés depuis votre premier don de sang validé. Vous êtes maintenant éligible pour donner à nouveau du sang et sauver plus de vies.',
+                        )
+            
             serializer = DonorDetailSerializer(donor)
             return Response(serializer.data)
         except Donor.DoesNotExist:
@@ -104,11 +132,11 @@ class DonorViewSet(viewsets.ModelViewSet):
         if status_value == 'eligible':
             today = timezone.now().date()
 
-            # 1. Last donation date check (within 60 days)
-            if donor.last_donation_date and (today - donor.last_donation_date).days < 60:
-                days_left = 60 - (today - donor.last_donation_date).days
+            # 1. Last donation date check (within 90 days)
+            if donor.last_donation_date and (today - donor.last_donation_date).days < 90:
+                days_left = 90 - (today - donor.last_donation_date).days
                 return Response(
-                    {'error': f'Cannot make donor eligible. Last donation was within 60 days. Must wait {days_left} more days.'},
+                    {'error': f'Cannot make donor eligible. Last donation was within 90 days. Must wait {days_left} more days.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

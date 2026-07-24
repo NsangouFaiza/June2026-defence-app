@@ -520,7 +520,7 @@ class DonorDashboardScreen extends ConsumerWidget {
       final lastDonation = DateTime(donor.lastDonationDate!.year, donor.lastDonationDate!.month, donor.lastDonationDate!.day);
       final current = DateTime(today.year, today.month, today.day);
       final daysPassed = current.difference(lastDonation).inDays;
-      daysRemaining = 60 - daysPassed;
+      daysRemaining = 90 - daysPassed;
       lastDonationText = 'Last Donation: ${donor.lastDonationDate!.year}-${donor.lastDonationDate!.month.toString().padLeft(2, '0')}-${donor.lastDonationDate!.day.toString().padLeft(2, '0')}';
     }
 
@@ -598,10 +598,55 @@ class DonorDashboardScreen extends ConsumerWidget {
                     color: Colors.white,
                   ),
                 ),
+                if (daysRemaining != null && daysRemaining > 0 && donor.lastDonationDate != null) ...[
+                  SizedBox(height: 10.h),
+                  Container(
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.event_available_rounded, color: Colors.white, size: 14),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'Next Eligible Date: ${donor.lastDonationDate!.add(const Duration(days: 90)).year}-${donor.lastDonationDate!.add(const Duration(days: 90)).month.toString().padLeft(2, '0')}-${donor.lastDonationDate!.add(const Duration(days: 90)).day.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        Row(
+                          children: [
+                            const Icon(Icons.timer_outlined, color: Colors.white, size: 14),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'Countdown: $daysRemaining day${daysRemaining > 1 ? "s" : ""} remaining',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (overallEligible)
+          if (overallEligible) ...[
+            SizedBox(width: 8.w),
             InkWell(
               onTap: () => Navigator.of(context).pushNamed('/book-appointment'),
               child: Container(
@@ -620,6 +665,7 @@ class DonorDashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );

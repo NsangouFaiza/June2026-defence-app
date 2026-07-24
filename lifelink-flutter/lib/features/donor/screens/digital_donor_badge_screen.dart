@@ -93,369 +93,24 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
                     ),
                   ),
 
-                // Redesigned Card Front UI
+                // Redesigned CR80 Landscape Flippable ID Card UI
                 Center(
-                  child: Container(
-                    width: 330.w,
-                    height: 570.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24.r),
-                      border: Border.all(
-                        color: hasDonated ? levelTheme.accentColor.withOpacity(0.4) : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                        if (hasDonated)
-                          BoxShadow(
-                            color: levelTheme.accentColor.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22.r),
-                      child: Stack(
-                        children: [
-                          // Background security stripes pattern
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: CardPatternPainter(),
-                            ),
-                          ),
-                          
-                          // Medical watermark
-                          Positioned(
-                            right: -40.w,
-                            bottom: 120.h,
-                            child: Opacity(
-                              opacity: 0.03,
-                              child: Icon(
-                                Icons.local_hospital_rounded,
-                                size: 220.w,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ),
-
-                          // Top Header Panel
-                          Positioned(
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: hasDonated
-                                      ? [const Color(0xFFD32F2F), const Color(0xFFB71C1C)]
-                                      : [Colors.grey.shade600, Colors.grey.shade800],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      _buildDropletLogo(22.h),
-                                      SizedBox(width: 8.w),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'LIFELINK',
-                                            style: TextStyle(
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                              letterSpacing: 1.5,
-                                            ),
-                                          ),
-                                          Text(
-                                            'OFFICIAL MEDICAL CREDENTIAL',
-                                            style: TextStyle(
-                                              fontSize: 7.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white.withOpacity(0.8),
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                                    decoration: BoxDecoration(
-                                      color: hasDonated ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(color: Colors.white.withOpacity(0.4)),
-                                    ),
-                                    child: Text(
-                                      hasDonated ? 'VERIFIED DONOR' : 'DRAFT CARD',
-                                      style: TextStyle(
-                                        fontSize: 8.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Main Info Content
-                          Positioned.fill(
-                            top: 52.h,
-                            child: Padding(
-                              padding: EdgeInsets.all(16.w),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  SizedBox(height: 12.h),
-                                  // Profile picture and verification badge
-                                  Center(
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        Container(
-                                          width: 96.w,
-                                          height: 96.w,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              colors: hasDonated ? levelTheme.cardGradients : [Colors.grey.shade400, Colors.grey.shade600],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 88.w,
-                                          height: 88.w,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: Colors.white,
-                                            border: Border.all(color: Colors.white, width: 2),
-                                          ),
-                                          child: Builder(
-                                            builder: (context) {
-                                              final pic = user?.fullProfilePictureUrl;
-                                              return pic != null && pic.isNotEmpty
-                                                  ? ClipOval(
-                                                      child: CachedNetworkImage(
-                                                        imageUrl: pic,
-                                                        fit: BoxFit.cover,
-                                                        errorWidget: (context, url, error) => Icon(
-                                                          Icons.person,
-                                                          size: 40.w,
-                                                          color: Colors.grey.shade300,
-                                                        ),
-                                                      ),
-                                                    )
-                                                  : Icon(
-                                                      Icons.person,
-                                                      size: 40.w,
-                                                      color: Colors.grey.shade300,
-                                                    );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: 10.h),
-
-                                  // Name and Status
-                                  Text(
-                                    user?.fullName ?? 'Donor Name',
-                                    style: TextStyle(
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF1F2937),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  SizedBox(height: 4.h),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        hasDonated ? Icons.verified_user_rounded : Icons.pending_outlined,
-                                        size: 13.sp,
-                                        color: hasDonated ? const Color(0xFF2E7D32) : Colors.grey.shade600,
-                                      ),
-                                      SizedBox(width: 4.w),
-                                      Text(
-                                        hasDonated ? 'Official LifeLink Verified Donor' : 'Pending Activation Seal',
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: hasDonated ? const Color(0xFF2E7D32) : Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 12.h),
-
-                                  // Unique Donor ID & Blood Group Info Panel
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                                    decoration: BoxDecoration(
-                                      color: hasDonated
-                                          ? const Color(0xFFB71C1C).withOpacity(0.04)
-                                          : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(
-                                        color: hasDonated
-                                            ? const Color(0xFFB71C1C).withOpacity(0.12)
-                                            : Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'DONOR UNIQUE ID',
-                                              style: TextStyle(
-                                                fontSize: 8.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.grey.shade500,
-                                              ),
-                                            ),
-                                            SizedBox(height: 2.h),
-                                            Text(
-                                              donor.donorIdCode,
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color: const Color(0xFF1F2937),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.bloodtype_rounded,
-                                              color: const Color(0xFFD32F2F),
-                                              size: 16.sp,
-                                            ),
-                                            SizedBox(width: 4.w),
-                                            Text(
-                                              donor.bloodGroup ?? 'O+',
-                                              style: TextStyle(
-                                                fontSize: 16.sp,
-                                                fontWeight: FontWeight.w900,
-                                                color: const Color(0xFFD32F2F),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: 10.h),
-
-                                  // Information details grid table
-                                  Expanded(
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade50.withOpacity(0.8),
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        border: Border.all(color: Colors.grey.shade200),
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          _buildInfoRow('Full Name', user?.fullName ?? 'N/A'),
-                                          _buildInfoRow('Date of Birth (DOB)', dobFormatted),
-                                          _buildInfoRow('Place of Birth (POB)', pobFormatted),
-                                          _buildInfoRow('Phone Number', user?.phoneNumber ?? 'N/A'),
-                                          _buildInfoRow('Donor Level', '${donor.level} ${levelTheme.emoji}'),
-                                          _buildInfoRow('Successful Donations', '${donor.totalDonations} Completed'),
-                                          _buildInfoRow(
-                                            'Last Donation Date',
-                                            donor.lastDonationDate != null
-                                                ? DateFormat('dd/MM/yyyy').format(donor.lastDonationDate!)
-                                                : 'No record found',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 10.h),
-
-                                  // Bottom Row: QR verification and seal stamp
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      // Verification QR
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            width: 68.w,
-                                            height: 68.w,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(10.r),
-                                              border: Border.all(color: Colors.grey.shade300),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withOpacity(0.04),
-                                                  blurRadius: 4,
-                                                ),
-                                              ],
-                                            ),
-                                            padding: EdgeInsets.all(6.w),
-                                            child: CustomPaint(
-                                              size: Size(56.w, 56.w),
-                                              painter: QRCodePainter(verificationUrl),
-                                            ),
-                                          ),
-                                          SizedBox(height: 4.h),
-                                          Text(
-                                            'SCAN TO VERIFY',
-                                            style: TextStyle(
-                                              fontSize: 7.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Authenticity Seal
-                                      _buildAuthenticitySeal(
-                                        hasDonated ? levelTheme.accentColor : Colors.grey,
-                                        hasDonated,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: FlipCard(
+                    front: _buildCardFront(context, donor, user, levelTheme, dobFormatted, pobFormatted, hasDonated),
+                    back: _buildCardBack(context, donor, user, levelTheme, hasDonated, verificationUrl),
                   ),
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.flip_camera_android_rounded, size: 14.sp, color: Colors.grey),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Tap card to flip / Appuyez pour retourner',
+                      style: TextStyle(fontSize: 11.sp, color: Colors.grey, fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 24.h),
 
@@ -490,7 +145,7 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
                           ),
                           icon: const Icon(Icons.share_rounded, size: 18),
                           label: Text(
-                            'Share Credential Certificate',
+                            'Share Credential Card',
                             style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -517,7 +172,7 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
                           ),
                           icon: const Icon(Icons.download_for_offline_rounded, size: 18),
                           label: Text(
-                            'Download Official PDF / Image',
+                            'Download Official ID Card',
                             style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -531,6 +186,571 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildCardFront(BuildContext context, DonorModel donor, dynamic user, _BadgeLevelTheme levelTheme, String dobFormatted, String pobFormatted, bool hasDonated) {
+    return Container(
+      width: 340.w,
+      height: 215.h,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.r),
+        child: Stack(
+          children: [
+            // Background gradient and stripes
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: hasDonated 
+                        ? [const Color(0xFF8B0000), const Color(0xFF2A0000)]
+                        : [Colors.grey.shade700, Colors.grey.shade900],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: CardPatternPainter(),
+              ),
+            ),
+            
+            // Medical icon watermark
+            Positioned(
+              right: -30.w,
+              bottom: -30.h,
+              child: Opacity(
+                opacity: 0.08,
+                child: Icon(
+                  Icons.local_hospital_rounded,
+                  size: 150.w,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+
+            // Top Header Bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 38.h,
+                padding: EdgeInsets.symmetric(horizontal: 14.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2),
+                  border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        _buildDropletLogo(20.h),
+                        SizedBox(width: 6.w),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'LIFELINK NETWORK',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            Text(
+                              'DIGITAL HEALTH IDENTITY',
+                              style: TextStyle(
+                                fontSize: 6.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white.withOpacity(0.6),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: hasDonated ? AppTheme.success.withOpacity(0.25) : Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(
+                          color: hasDonated ? AppTheme.success.withOpacity(0.6) : Colors.white24,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasDonated ? Icons.verified_user_rounded : Icons.pending_rounded,
+                            size: 8.sp,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            hasDonated ? 'VERIFIED DONOR' : 'DRAFT CREDENTIAL',
+                            style: TextStyle(
+                              fontSize: 7.sp,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Content Body
+            Positioned.fill(
+              top: 38.h,
+              child: Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Row(
+                  children: [
+                    // Left Column: Photo & Blood Group Badge
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Profile picture with border
+                        Container(
+                          width: 68.w,
+                          height: 68.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: hasDonated ? levelTheme.accentColor : Colors.grey.shade400,
+                              width: 2.w,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Builder(
+                              builder: (context) {
+                                final pic = user?.fullProfilePictureUrl;
+                                return pic != null && pic.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: pic,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (context, url, error) => Container(
+                                          color: Colors.grey.shade300,
+                                          child: Icon(Icons.person, size: 30.w, color: Colors.grey.shade600),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey.shade300,
+                                        child: Icon(Icons.person, size: 30.w, color: Colors.grey.shade600),
+                                      );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        // Prominent Blood Group Badge
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade900,
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(color: Colors.white24, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.bloodtype_rounded, color: Colors.white, size: 10.sp),
+                              SizedBox(width: 2.w),
+                              Text(
+                                donor.bloodGroup ?? 'O+',
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: 14.w),
+
+                    // Right Column: Identity Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            (user?.fullName ?? 'Donor Name').toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            'DONOR ID: ${donor.donorIdCode}',
+                            style: TextStyle(
+                              fontSize: 8.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          
+                          // Grid details
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactLabelVal('DOB', dobFormatted),
+                              ),
+                              Expanded(
+                                child: _buildCompactLabelVal('PHONE', user?.phoneNumber ?? 'N/A'),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactLabelVal('LEVEL', '${donor.level} ${levelTheme.emoji}'),
+                              ),
+                              Expanded(
+                                child: _buildCompactLabelVal('STATUS', hasDonated ? 'ACTIVE VERIFIED' : 'PENDING DONATION'),
+                              ),
+                            ],
+                          ),
+                          
+                          SizedBox(height: 10.h),
+                          // Bottom badge & Script message
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Circular Official Seal
+                              _buildCompactAuthenticitySeal(
+                                hasDonated ? levelTheme.accentColor : Colors.grey,
+                                hasDonated,
+                              ),
+                              Padding(
+                                padding: EdgeInsets.only(right: 8.w),
+                                child: Text(
+                                  '"Every donation saves lives."',
+                                  style: TextStyle(
+                                    fontSize: 8.sp,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardBack(BuildContext context, DonorModel donor, dynamic user, _BadgeLevelTheme levelTheme, bool hasDonated, String verificationUrl) {
+    final memberSince = donor.createdAt != null 
+        ? DateFormat('dd/MM/yyyy').format(donor.createdAt!) 
+        : '24/07/2026';
+    final lastDonationFormatted = donor.lastDonationDate != null
+        ? DateFormat('dd/MM/yyyy').format(donor.lastDonationDate!)
+        : 'N/A';
+
+    return Container(
+      width: 340.w,
+      height: 215.h,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B), // Slate 800 background
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.r),
+        child: Stack(
+          children: [
+            // Security grid pattern on background
+            Positioned.fill(
+              child: CustomPaint(
+                painter: CardPatternPainter(),
+              ),
+            ),
+            
+            // 1. Black Magnetic Stripe at the top
+            Positioned(
+              top: 14.h,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 22.h,
+                color: Colors.black,
+              ),
+            ),
+
+            // Content body below magnetic strip
+            Positioned.fill(
+              top: 42.h,
+              child: Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Row(
+                  children: [
+                    // Left Side: LifeLink Contact & Stats
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // LifeLink Contact info
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'LIFELINK SUPPORT SYSTEM',
+                                style: TextStyle(
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                'Phone: +237 677 889 900\nEmail: support@lifelink.org\nWeb: www.lifelink.org',
+                                style: TextStyle(
+                                  fontSize: 7.sp,
+                                  color: Colors.white70,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          // Policy/Notice
+                          Text(
+                            'Notice: This digital credential remains the property of LifeLink. Presentation authorize emergency blood access checks.',
+                            style: TextStyle(
+                              fontSize: 6.sp,
+                              color: Colors.white38,
+                              height: 1.2,
+                            ),
+                          ),
+                          
+                          // Statistics Summary Row
+                          Row(
+                            children: [
+                              _buildBackStat('TOTAL DONATIONS', '${donor.totalDonations}'),
+                              SizedBox(width: 8.w),
+                              _buildBackStat('LAST DONATION', lastDonationFormatted),
+                              SizedBox(width: 8.w),
+                              _buildBackStat('MEMBER SINCE', memberSince),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+
+                    // Right Side: QR code & barcode signature
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Verification QR Code
+                        Container(
+                          width: 58.w,
+                          height: 58.w,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6.r),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                          ),
+                          padding: EdgeInsets.all(4.w),
+                          child: CustomPaint(
+                            size: Size(50.w, 50.w),
+                            painter: QRCodePainter(verificationUrl),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'SCAN TO VERIFY',
+                          style: TextStyle(
+                            fontSize: 6.sp,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white54,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        // Holder Signature mockup line
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 70.w,
+                              height: 1.h,
+                              color: Colors.white38,
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              'Holder Signature',
+                              style: TextStyle(
+                                fontSize: 5.sp,
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        // Barcode
+                        Container(
+                          width: 70.w,
+                          height: 12.h,
+                          color: Colors.transparent,
+                          child: CustomPaint(
+                            painter: BarcodePainter(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactLabelVal(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 6.sp,
+            fontWeight: FontWeight.w900,
+            color: Colors.white54,
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: 1.h),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 8.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactAuthenticitySeal(Color accentColor, bool hasDonated) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(4.r),
+        border: Border.all(color: accentColor.withOpacity(0.8), width: 1.w),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasDonated ? Icons.verified_rounded : Icons.lock_rounded,
+            color: accentColor,
+            size: 8.sp,
+          ),
+          SizedBox(width: 3.w),
+          Text(
+            hasDonated ? 'OFFICIAL SEAL' : 'PENDING SEAL',
+            style: TextStyle(
+              fontSize: 6.sp,
+              fontWeight: FontWeight.bold,
+              color: accentColor,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 5.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.white38,
+          ),
+        ),
+        SizedBox(height: 1.h),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 7.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 
@@ -935,4 +1155,28 @@ class QRCodePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(QRCodePainter oldDelegate) => oldDelegate.data != data;
+}
+
+class BarcodePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white70
+      ..style = PaintingStyle.fill;
+    
+    // Draw vertical bars of varying widths
+    double currentX = 0;
+    final widths = [1, 2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 1, 4, 2, 1, 2, 3, 1, 2, 1, 4, 1, 2, 3, 1, 1, 2, 1];
+    for (int i = 0; i < widths.length; i++) {
+      double w = widths[i] * 1.2;
+      if (i % 2 == 0) {
+        canvas.drawRect(Rect.fromLTWH(currentX, 0, w, size.height), paint);
+      }
+      currentX += w + 1;
+      if (currentX >= size.width) break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(BarcodePainter oldDelegate) => false;
 }

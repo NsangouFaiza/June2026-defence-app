@@ -679,22 +679,43 @@ class PatientDashboardScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          ] else if (request.status.toUpperCase() == 'APPROVED' && request.paymentStatus.toUpperCase() == 'PAID') ...[
+          ] else if (request.paymentStatus.toUpperCase() == 'PAID') ...[
             const Divider(height: 20, thickness: 1),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const Icon(Icons.check_circle_outline, color: AppTheme.success, size: 16),
-                SizedBox(width: 4.w),
-                Text(
-                  'Payment: PAID (${request.paymentReference ?? ""})',
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    color: AppTheme.success,
-                    fontWeight: FontWeight.bold,
+            Container(
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: AppTheme.success.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded, color: AppTheme.success, size: 18),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Status: Paid',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: AppTheme.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Payment has been successfully received. Ref: ${request.paymentReference ?? "N/A"}',
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: AppTheme.success,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ],

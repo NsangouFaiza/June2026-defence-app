@@ -1,3 +1,6 @@
+import 'dart:io';
+import '../services/api_service.dart';
+
 class DonorModel {
   final int id;
   final int userId;
@@ -21,10 +24,38 @@ class DonorModel {
   final int points;
   final String level;
   final String? donorCode;
+  
+  final double? latitude;
+  final double? longitude;
+  final String? profilePicture;
 
   String get donorIdCode => (donorCode != null && donorCode!.isNotEmpty)
       ? donorCode!
       : 'DON-2026-${id.toString().padLeft(4, '0')}';
+
+  String? get fullProfilePictureUrl {
+    if (profilePicture == null || profilePicture!.isEmpty) return null;
+    
+    String url = profilePicture!;
+    try {
+      if (Platform.isAndroid) {
+        url = url.replaceAll('127.0.0.1:8000', '10.0.2.2:8000')
+                 .replaceAll('localhost:8000', '10.0.2.2:8000');
+      }
+    } catch (_) {}
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    final server = ApiService.serverBaseUrl;
+    final path = url.startsWith('/') ? url : '/$url';
+    return '$server$path';
+  }
+
+  int get age {
+    if (dateOfBirth == null) return 25; // Default fallback age
+    return DateTime.now().year - dateOfBirth!.year;
+  }
 
   DonorModel({
     required this.id,
@@ -49,6 +80,9 @@ class DonorModel {
     this.points = 0,
     this.level = 'Bronze',
     this.donorCode,
+    this.latitude,
+    this.longitude,
+    this.profilePicture,
   });
 
   factory DonorModel.fromJson(Map<String, dynamic> json) {
@@ -87,6 +121,9 @@ class DonorModel {
       points: json['points'] as int? ?? 0,
       level: json['level'] as String? ?? 'Bronze',
       donorCode: json['donor_code'] as String?,
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      profilePicture: json['profile_picture'] ?? json['user']?['profile_picture'],
     );
   }
 
@@ -103,6 +140,9 @@ class DonorModel {
       'next_eligible_date': nextEligibleDate?.toIso8601String(),
       'points': points,
       'level': level,
+      'latitude': latitude,
+      'longitude': longitude,
+      'profile_picture': profilePicture,
     };
   }
 }

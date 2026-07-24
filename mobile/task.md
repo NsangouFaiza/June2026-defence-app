@@ -1,0 +1,31 @@
+# Tasks
+
+- [x] **1. Backend Database Schema Updates**
+  - [x] Modify `Campaign` model in `lifelink-backend/campaigns/models.py` with subtitle, category, map coordinates (lat, lng), deadline, start/end times, expected donors, target groups, eligibility criteria, gender restriction, location metrics, radius, contact, notes, visibility, and views_count.
+  - [x] Add `CampaignRegistration` model in `lifelink-backend/campaigns/models.py` for RSVP details (status, check-in, donation status).
+  - [x] Run Django migration commands (`makemigrations`, `migrate`).
+- [x] **2. Backend Serializers & Views Implementation**
+  - [x] Create `CampaignRegistrationSerializer` in `lifelink-backend/campaigns/serializers.py`.
+  - [x] Update `CampaignSerializer` to handle new fields.
+  - [x] Implement views/endpoints in `lifelink-backend/campaigns/views.py`:
+    - [x] `duplicate` endpoint.
+    - [x] `publish`, `unpublish`, `archive`, `restore` endpoints.
+    - [x] `increment_views` endpoint.
+    - [x] RSVP `register` and `unregister` endpoints.
+    - [x] `participants` list (search + filter) and approve/reject actions.
+    - [x] `attendance_check` endpoint.
+    - [x] `statistics` metrics endpoint.
+    - [x] `export_participants` (CSV output) endpoint.
+    - [x] Auto-notification triggers on significant modifications or cancellations.
+- [x] **3. Flutter Models & Repositories**
+  - [x] Update `CampaignModel` in `lib/data/models/campaign_model.dart` for all fields and counts.
+  - [x] Add API integration methods in `lib/data/repositories/campaign_repository.dart`.
+- [ ] **4. Flutter UI Redesign**
+  - [ ] Fix AppBar `TabBar` contrast style in `campaigns_screen.dart`.
+  - [ ] Redesign campaign cards and status categorizations.
+  - [ ] Refactor creation/edit sheet with all advanced category options, checklist criteria, time selectors, maps coordinates, and visibility settings.
+  - [ ] Create Participant RSVP dialog (search, filter, approve/reject/attendance, export).
+  - [ ] Create statistics analysis overlay dialog.
+  - [ ] Overhaul `campaign_details_screen.dart` for Donors (mapping GPS, dead line countdown, target groups info, and RSVP triggers).
+- [ ] **5. Verification**
+  - [ ] Verify clean compilation checks (`python manage.py check`, `flutter analyze`).

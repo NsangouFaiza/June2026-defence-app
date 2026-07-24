@@ -30,6 +30,7 @@ class DonorListScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Blood Group',
                       isDense: true,
@@ -45,6 +46,7 @@ class DonorListScreen extends ConsumerWidget {
                 SizedBox(width: 16.w),
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Eligibility',
                       isDense: true,

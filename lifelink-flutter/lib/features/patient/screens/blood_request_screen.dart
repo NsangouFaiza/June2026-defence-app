@@ -496,6 +496,7 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
 
   Widget _buildHospitalDropdown() {
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       value: _selectedHospitalId,
       decoration: InputDecoration(
         labelText: 'Destination Hospital',
@@ -518,7 +519,13 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
         fillColor: Colors.grey[50],
       ),
       items: _hospitals
-          .map((h) => DropdownMenuItem(value: h.id.toString(), child: Text(h.name)))
+          .map((h) => DropdownMenuItem(
+                value: h.id.toString(),
+                child: Text(
+                  h.name,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
           .toList(),
       onChanged: (value) => setState(() => _selectedHospitalId = value),
       validator: (value) => value == null ? 'Please select a hospital' : null,

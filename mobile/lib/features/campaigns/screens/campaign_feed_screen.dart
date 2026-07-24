@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/campaign_repository.dart';
 import '../../../../data/models/campaign_model.dart';
+import 'campaign_details_screen.dart';
 
 class CampaignFeedScreen extends ConsumerWidget {
   const CampaignFeedScreen({super.key});
@@ -50,7 +51,11 @@ class CampaignFeedScreen extends ConsumerWidget {
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () {
-                    // View campaign details
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => CampaignDetailsScreen(campaignId: campaign.id),
+                      ),
+                    );
                   },
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,17 +91,17 @@ class CampaignFeedScreen extends ConsumerWidget {
                                     vertical: 4.h,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _getCampaignTypeColor(campaign.type).withOpacity(0.1),
+                                    color: _getCampaignTypeColor(campaign.category).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8.r),
                                     border: Border.all(
-                                      color: _getCampaignTypeColor(campaign.type),
+                                      color: _getCampaignTypeColor(campaign.category),
                                     ),
                                   ),
                                   child: Text(
-                                    campaign.type.toUpperCase(),
+                                    campaign.category,
                                     style: TextStyle(
                                       fontSize: 10.sp,
-                                      color: _getCampaignTypeColor(campaign.type),
+                                      color: _getCampaignTypeColor(campaign.category),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -177,18 +182,24 @@ class CampaignFeedScreen extends ConsumerWidget {
     );
   }
 
-  Color _getCampaignTypeColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'donation':
-        return AppTheme.primaryColor;
-      case 'emergency':
+  Color _getCampaignTypeColor(String cat) {
+    switch (cat.toUpperCase()) {
+      case 'EMERGENCY BLOOD DRIVE':
+      case 'EMERGENCY_APPEAL':
         return AppTheme.error;
-      case 'education':
+      case 'AWARENESS':
+      case 'DONATION_AWARENESS':
+      case 'HEALTH_EDUCATION':
         return AppTheme.success;
-      case 'event':
+      case 'MOBILE COLLECTION':
+      case 'MOBILE_COLLECTION':
+        return AppTheme.primaryColor;
+      case 'HOSPITAL EVENT':
+      case 'HOSPITAL_EVENT':
+      case 'COMMUNITY_EVENT':
         return AppTheme.warning;
       default:
-        return Colors.grey;
+        return Colors.teal;
     }
   }
 }

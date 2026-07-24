@@ -159,35 +159,45 @@ class PaymentHistoryView(APIView):
             payments = Payment.objects.all().select_related('hospital', 'blood_request')
             for p in payments:
                 inv_num = p.invoices.first().invoice_number if p.invoices.exists() else f"RCPT-{p.id:04d}"
+                h_name = p.hospital.name if p.hospital else (p.blood_request.hospital.name if p.blood_request and p.blood_request.hospital else "N/A")
+                sub_period = f"{max(1, int(p.amount // 25))} Month(s)" if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
                 receipts.append({
                     'id': p.id,
                     'receipt_number': p.transaction_id or inv_num,
+                    'transaction_reference': p.transaction_reference or p.external_reference or p.transaction_id or "N/A",
                     'user_name': p.user.full_name if p.user else p.hospital.name if p.hospital else "System",
                     'user_role': p.user.role if p.user else "hospital_staff",
                     'created_at': p.created_at.isoformat(),
-                    'payment_type': 'Hospital Subscription' if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else 'Blood Request (Inventory)',
+                    'payment_type': 'Hospital Subscription' if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else 'Blood Request Payment',
                     'description': f"Hospital subscription for {p.hospital.name}" if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else f"Blood Request fulfill: {p.blood_request.quantity} Unit(s)" if p.blood_request else "Blood request fulfill payment",
                     'amount': float(p.amount),
                     'payment_method': p.payment_method,
                     'status': p.status,
                     'reference_id': inv_num,
+                    'hospital_name': h_name,
+                    'subscription_period': sub_period,
                 })
         elif role == 'patient':
             # Get all patient payments for blood requests
             payments = Payment.objects.filter(user=user, payment_type='BLOOD_REQUEST_PAYMENT').select_related('blood_request')
             for p in payments:
+                inv_num = p.invoices.first().invoice_number if p.invoices.exists() else f"RCPT-{p.id:04d}"
+                h_name = p.blood_request.hospital.name if p.blood_request and p.blood_request.hospital else "N/A"
                 receipts.append({
                     'id': p.id,
-                    'receipt_number': p.transaction_id or f"RCPT-{p.id:04d}",
+                    'receipt_number': p.transaction_id or inv_num,
+                    'transaction_reference': p.transaction_reference or p.external_reference or p.transaction_id or "N/A",
                     'user_name': user.full_name,
                     'user_role': 'Patient',
                     'created_at': p.created_at.isoformat(),
-                    'payment_type': 'Blood Request (Inventory)',
+                    'payment_type': 'Blood Request Payment',
                     'description': f"Blood Request Fulfill: {p.blood_request.quantity} Unit(s) of {p.blood_request.blood_group} blood." if p.blood_request else "Blood Request Fulfill Payment",
                     'amount': float(p.amount),
                     'payment_method': p.payment_method,
                     'status': p.status,
                     'reference_id': p.blood_request.id if p.blood_request else None,
+                    'hospital_name': h_name,
+                    'subscription_period': None,
                 })
         elif role in ('hospital_staff', 'blood_bank_admin'):
             # Get staff hospital subscription payments
@@ -197,9 +207,12 @@ class PaymentHistoryView(APIView):
                 subs = Payment.objects.filter(hospital=staff_profile.hospital, payment_type='HOSPITAL_SUBSCRIPTION')
                 for s in subs:
                     inv_num = s.invoices.first().invoice_number if s.invoices.exists() else f"INV-SUB-{s.id:04d}"
+                    h_name = staff_profile.hospital.name
+                    sub_period = f"{max(1, int(s.amount // 25))} Month(s)" if s.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
                     receipts.append({
                         'id': s.id,
                         'receipt_number': s.transaction_id or inv_num,
+                        'transaction_reference': s.transaction_reference or s.external_reference or s.transaction_id or "N/A",
                         'user_name': user.full_name,
                         'user_role': 'Hospital Staff',
                         'created_at': s.created_at.isoformat(),
@@ -209,6 +222,8 @@ class PaymentHistoryView(APIView):
                         'payment_method': s.payment_method,
                         'status': s.status,
                         'reference_id': inv_num,
+                        'hospital_name': h_name,
+                        'subscription_period': sub_period,
                     })
 
         # Sort receipts by date descending

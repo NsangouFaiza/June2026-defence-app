@@ -224,6 +224,10 @@ class ReceiptHistoryScreen extends ConsumerWidget {
     );
   }
 
+  void showReceiptDetailsSheetFromContext(BuildContext context, Map<String, dynamic> receipt) {
+    _showReceiptDetailsSheet(context, receipt);
+  }
+
   void _showReceiptDetailsSheet(BuildContext context, Map<String, dynamic> receipt) {
     final status = (receipt['status'] ?? 'PENDING').toString().toUpperCase();
     final amount = receipt['amount'] ?? 0.0;

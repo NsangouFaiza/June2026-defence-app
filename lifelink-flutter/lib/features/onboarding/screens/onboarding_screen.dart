@@ -59,8 +59,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         children: [
                           // Illustration Container
                           Container(
-                            width: 280.w,
-                            height: 280.w,
+                            width: MediaQuery.of(context).size.height > 700 ? 280.w : 180.w,
+                            height: MediaQuery.of(context).size.height > 700 ? 280.w : 180.w,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -82,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: Center(
                               child: Icon(
                                 page.icon,
-                                size: 140.w,
+                                size: MediaQuery.of(context).size.height > 700 ? 140.w : 90.w,
                                 color: page.color,
                               ),
                             ),

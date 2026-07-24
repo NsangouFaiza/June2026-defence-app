@@ -20,6 +20,7 @@ class BloodRequestSerializer(serializers.ModelSerializer):
     donor_name = serializers.CharField(source='donor.user.full_name', read_only=True, allow_null=True)
     donor_phone = serializers.CharField(source='donor.user.phone_number', read_only=True, allow_null=True)
     donor_email = serializers.CharField(source='donor.user.email', read_only=True, allow_null=True)
+    appointment_details = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = BloodRequest
@@ -29,9 +30,25 @@ class BloodRequestSerializer(serializers.ModelSerializer):
             'blood_group', 'quantity', 'urgency', 'is_emergency',
             'status', 'reason', 'notes', 'payment_status', 'payment_reference',
             'fulfillment_type', 'donor_id', 'donor', 'donor_name', 'donor_phone',
-            'donor_email', 'created_at', 'updated_at',
+            'donor_email', 'appointment_details', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'payment_status', 'payment_reference']
+
+    def get_appointment_details(self, obj):
+        appointment = obj.appointments.first()
+        if appointment:
+            return {
+                'id': appointment.id,
+                'date': appointment.scheduled_date.isoformat(),
+                'time': appointment.scheduled_time.strftime('%H:%M') if hasattr(appointment.scheduled_time, 'strftime') else str(appointment.scheduled_time),
+                'status': appointment.status,
+                'notes': appointment.notes,
+                'hospital_name': appointment.hospital.name,
+                'hospital_address': appointment.hospital.address or '',
+                'donor_name': appointment.donor.user.full_name,
+                'donor_phone': appointment.donor.user.phone_number,
+            }
+        return None
 
     def get_patient_data(self, obj):
         from patients.serializers import PatientSerializer

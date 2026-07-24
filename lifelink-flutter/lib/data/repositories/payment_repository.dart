@@ -31,9 +31,9 @@ class PaymentRepository {
   Future<PaymentModel> getPaymentStatus(int paymentId) async {
     try {
       print("--- Outgoing Payment Status Request from Flutter to Django ---");
-      print("URL: /payments/$paymentId/status/");
+      print("URL: /payments/$paymentId/");
       
-      final response = await _apiService.get('/payments/$paymentId/status/');
+      final response = await _apiService.get('/payments/$paymentId/');
       return PaymentModel.fromJson(response.data);
     } catch (e) {
       if (e is DioException && e.response?.data != null) {
@@ -47,6 +47,31 @@ class PaymentRepository {
         }
       }
       throw Exception('Failed to get payment status: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyPayment(int paymentId) async {
+    try {
+      print("--- Outgoing Payment Verification Request from Flutter to Django ---");
+      print("URL: /payments/verify/");
+      print("Payload: {'payment_id': $paymentId}");
+      
+      final response = await _apiService.post('/payments/verify/', {
+        'payment_id': paymentId,
+      });
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          if (respData.containsKey('error')) {
+            throw Exception(respData['error']);
+          } else if (respData.containsKey('detail')) {
+            throw Exception(respData['detail']);
+          }
+        }
+      }
+      throw Exception('Failed to verify payment: $e');
     }
   }
 

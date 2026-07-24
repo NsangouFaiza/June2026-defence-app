@@ -648,6 +648,7 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog> {
                 ),
                 SizedBox(height: 8.h),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: _selectedGender,
                   decoration: InputDecoration(
                     labelText: localization.translate('gender'),
@@ -664,6 +665,7 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog> {
                 ),
                 SizedBox(height: 8.h),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: _selectedBloodGroup,
                   decoration: InputDecoration(
                     labelText: localization.translate('blood_group'),

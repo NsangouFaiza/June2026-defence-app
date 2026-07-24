@@ -13,7 +13,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = [
             'id', 'donor', 'donor_name', 'hospital', 'hospital_name',
-            'date', 'time', 'status', 'notes', 'confirmed_by',
+            'blood_request', 'date', 'time', 'status', 'notes', 'confirmed_by',
             'completed_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'donor']

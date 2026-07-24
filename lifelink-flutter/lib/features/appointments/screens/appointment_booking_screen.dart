@@ -132,13 +132,20 @@ class _AppointmentBookingScreenState extends ConsumerState<AppointmentBookingScr
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   value: _selectedHospitalId,
                   decoration: const InputDecoration(
                     labelText: 'Hospital',
                     prefixIcon: Icon(Icons.local_hospital_outlined),
                   ),
                   items: _hospitals
-                      .map((h) => DropdownMenuItem(value: h.id, child: Text(h.name)))
+                      .map((h) => DropdownMenuItem(
+                            value: h.id,
+                            child: Text(
+                              h.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ))
                       .toList(),
                   onChanged: (value) {
                     setState(() => _selectedHospitalId = value);

@@ -8,6 +8,7 @@ import '../../../../data/repositories/admin_repository.dart';
 import '../../../../data/services/api_service.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
+import '../../payment/screens/receipt_history_screen.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -20,7 +21,7 @@ class AdminPanelScreen extends ConsumerWidget {
     final user = userAsync.value;
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -74,6 +75,7 @@ class AdminPanelScreen extends ConsumerWidget {
             tabs: [
               Tab(text: localization.translate('users')),
               Tab(text: localization.translate('hospitals')),
+              Tab(text: 'Finance'),
               Tab(text: localization.translate('statistics')),
             ],
           ),
@@ -82,6 +84,7 @@ class AdminPanelScreen extends ConsumerWidget {
           children: [
             _buildUsersTab(context, ref, adminRepo, localization),
             _buildHospitalsTab(context, ref, adminRepo, localization),
+            _buildFinanceTab(context, ref, adminRepo, localization),
             _buildStatisticsTab(context, ref, adminRepo, localization),
           ],
         ),
@@ -459,7 +462,7 @@ class AdminPanelScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete User'),
-        content: const Text('Are you sure you want to delete this user? This action cannot be undone.'),
+        content: const Text('Are you sure you want to permanently delete this user? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -475,10 +478,292 @@ class AdminPanelScreen extends ConsumerWidget {
                 );
               }
             },
-            child: const Text('Delete'),
+            child: const Text('Delete', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFinanceTab(
+    BuildContext context,
+    WidgetRef ref,
+    AdminRepository adminRepo,
+    LocalizationService localization,
+  ) {
+    return FutureBuilder<List<dynamic>>(
+      future: ApiService().get('/payments/history/').then((res) => res.data as List),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading finance records: ${snapshot.error}'));
+        }
+
+        final List<dynamic> allPayments = snapshot.data ?? [];
+        final successfulPayments = allPayments.where((p) => p['status'] == 'SUCCESS').toList();
+        
+        final double totalRevenue = successfulPayments.fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+        final double subRevenue = successfulPayments
+            .where((p) => p['payment_type'] == 'Hospital Subscription')
+            .fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+        final double reqRevenue = successfulPayments
+            .where((p) => p['payment_type'] != 'Hospital Subscription')
+            .fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FINANCIAL SYSTEM STATS',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20.w),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppTheme.success, Colors.teal.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.success.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total Revenue Collected',
+                                style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                              ),
+                              Icon(Icons.account_balance_wallet_rounded, color: Colors.white70, size: 24.w),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            '${totalRevenue.toStringAsFixed(0)} FCFA',
+                            style: TextStyle(
+                              fontSize: 28.sp,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.all(14.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.card_membership_rounded, color: AppTheme.primaryColor, size: 18.w),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'Subscriptions',
+                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  '${subRevenue.toStringAsFixed(0)} FCFA',
+                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: AppTheme.onSurface),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.all(14.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.local_hospital_rounded, color: AppTheme.accentColor, size: 18.w),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'Blood Request',
+                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  '${reqRevenue.toStringAsFixed(0)} FCFA',
+                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: AppTheme.onSurface),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24.h),
+                    
+                    Text(
+                      'TRANSACTION LOG & RECEIPTS',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            allPayments.isEmpty
+                ? SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long_rounded, size: 48.w, color: Colors.grey.shade300),
+                          SizedBox(height: 12.h),
+                          const Text('No transactions recorded yet', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  )
+                : SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final payment = allPayments[index] as Map<String, dynamic>;
+                          final amount = (payment['amount'] ?? 0.0) as double;
+                          final dateStr = payment['created_at'] ?? '';
+                          final parsedDate = dateStr.isNotEmpty ? DateTime.parse(dateStr) : DateTime.now();
+                          final dateFormatted = dateStr.isNotEmpty 
+                              ? "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year}"
+                              : '';
+                          final status = (payment['status'] ?? 'PENDING').toString().toUpperCase();
+                          final isSuccess = status == 'SUCCESS' || status == 'PAID';
+                          
+                          return Card(
+                            margin: EdgeInsets.only(bottom: 12.h),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              leading: CircleAvatar(
+                                backgroundColor: isSuccess 
+                                    ? AppTheme.success.withOpacity(0.12)
+                                    : AppTheme.warning.withOpacity(0.12),
+                                child: Icon(
+                                  payment['payment_type'] == 'Hospital Subscription'
+                                      ? Icons.card_membership_rounded
+                                      : Icons.local_hospital_rounded,
+                                  color: isSuccess ? AppTheme.success : AppTheme.warning,
+                                ),
+                              ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      payment['payment_type'] ?? 'Payment',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${amount.toStringAsFixed(0)} FCFA',
+                                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.onSurface, fontSize: 14.sp),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Padding(
+                                padding: EdgeInsets.only(top: 6.h),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Payer: ${payment['user_name']} (${payment['user_role']})'),
+                                    SizedBox(height: 2.h),
+                                    Text('Ref: ${payment['transaction_reference'] ?? "N/A"}'),
+                                    SizedBox(height: 2.h),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(dateFormatted, style: TextStyle(fontSize: 10.sp, color: Colors.grey)),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                          decoration: BoxDecoration(
+                                            color: isSuccess 
+                                                ? AppTheme.success.withOpacity(0.1)
+                                                : AppTheme.warning.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8.r),
+                                          ),
+                                          child: Text(
+                                            status,
+                                            style: TextStyle(
+                                              fontSize: 9.sp, 
+                                              fontWeight: FontWeight.bold, 
+                                              color: isSuccess ? AppTheme.success : AppTheme.warning
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              onTap: () {
+                                const ReceiptHistoryScreen().showReceiptDetailsSheetFromContext(context, payment);
+                              },
+                            ),
+                          );
+                        },
+                        childCount: allPayments.length,
+                      ),
+                    ),
+                  ),
+          ],
+        );
+      },
     );
   }
 }

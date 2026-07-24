@@ -27,6 +27,147 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   bool _isLoading = false;
   bool _isProcessing = false;
 
+  Future<void> _waitForPaymentCompletion(int paymentId, Function(Map<String, dynamic> successPayment) onSuccess) async {
+    final paymentRepo = ref.read(paymentRepositoryProvider);
+    bool completed = false;
+    int attempts = 0;
+    
+    // Show a loading/pending dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: AppTheme.primaryColor),
+                    SizedBox(height: 20.h),
+                    Text(
+                      'Confirming Payment',
+                      style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Please check your phone and enter your Mobile Money PIN when prompted.',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Checking status (Attempt ${attempts + 1})...',
+                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade400, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Start polling
+    while (!completed && attempts < 30) { // Poll for up to 60 seconds
+      await Future.delayed(const Duration(seconds: 2));
+      attempts++;
+      try {
+        final verifyResult = await paymentRepo.verifyPayment(paymentId);
+        final verifyStatus = (verifyResult['status'] ?? 'PENDING').toString().toUpperCase();
+        if (verifyStatus == 'SUCCESS') {
+          completed = true;
+          if (mounted) {
+            Navigator.of(context).pop(); // Pop the waiting dialog
+            onSuccess(verifyResult);
+          }
+          break;
+        } else if (verifyStatus == 'FAILED') {
+          completed = true;
+          if (mounted) {
+            Navigator.of(context).pop(); // Pop the waiting dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment verification failed or was cancelled.'),
+                backgroundColor: AppTheme.error,
+              ),
+            );
+          }
+          break;
+        }
+      } catch (e) {
+        debugPrint('Error polling status: $e');
+      }
+    }
+
+    if (!completed) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Pop the waiting dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment verification timed out. If you were debited, it will reflect shortly.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSuccessPaymentDialog(Map<String, dynamic> payment) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: AppTheme.success, size: 28.w),
+            SizedBox(width: 10.w),
+            const Expanded(
+              child: Text(
+                'Payment Successful',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, size: 64.w, color: AppTheme.success),
+            SizedBox(height: 16.h),
+            const Text(
+              'Your payment has been successfully received. The blood request status has been updated.',
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Transaction ID: ${payment['transaction_id'] ?? payment['transaction_reference'] ?? "N/A"}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                '/patient-dashboard',
+                (route) => false,
+              );
+            },
+            child: const Text('Back to Dashboard'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _processPayment() async {
     if (_selectedMethod == null || _phoneNumber == null || _phoneNumber!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,7 +188,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       });
 
       if (mounted) {
-        _showPaymentDialog(result.toJson());
+        if (result.status.toUpperCase() == 'PENDING') {
+          _waitForPaymentCompletion(result.id, (successPaymentJson) {
+            _showSuccessPaymentDialog(successPaymentJson);
+          });
+        } else {
+          _showPaymentDialog(result.toJson());
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -98,7 +245,15 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop();
+              if (result['status'] == 'SUCCESS') {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/patient-dashboard',
+                  (route) => false,
+                );
+              }
+            },
             child: const Text('OK'),
           ),
         ],

@@ -14,6 +14,7 @@ APPOINTMENT_STATUS_CHOICES = (
 class Appointment(models.Model):
     donor = models.ForeignKey('donors.Donor', on_delete=models.CASCADE, related_name='appointments')
     hospital = models.ForeignKey('hospitals.Hospital', on_delete=models.CASCADE, related_name='appointments')
+    blood_request = models.ForeignKey('requests.BloodRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     scheduled_date = models.DateField()
     scheduled_time = models.TimeField()
     status = models.CharField(max_length=20, choices=APPOINTMENT_STATUS_CHOICES, default='SCHEDULED')

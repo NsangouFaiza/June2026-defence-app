@@ -29,6 +29,13 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
     _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
   }
 
+  void _refreshData() {
+    setState(() {
+      _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
+      _isInitialized = false;
+    });
+  }
+
   void _showEditHospitalDialog(BuildContext context, HospitalModel currentHospital) {
     final nameController = TextEditingController(text: currentHospital.name);
     final descriptionController = TextEditingController(text: currentHospital.description);
@@ -198,6 +205,22 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                 }
 
                 final hospital = _hospital!;
+
+                final now = DateTime.now();
+                final difference = hospital.subscriptionEndDate != null ? hospital.subscriptionEndDate!.difference(now) : null;
+                final daysRemaining = difference != null ? difference.inDays : 0;
+                final hoursRemaining = difference != null ? difference.inHours % 24 : 0;
+
+                String countdownText = '';
+                if (difference != null) {
+                  if (daysRemaining > 0) {
+                    countdownText = '$daysRemaining day${daysRemaining > 1 ? "s" : ""} remaining';
+                  } else if (hoursRemaining > 0) {
+                    countdownText = '$hoursRemaining hour${hoursRemaining > 1 ? "s" : ""} remaining';
+                  } else {
+                    countdownText = 'Expires today!';
+                  }
+                }
 
                 return CustomScrollView(
                   slivers: [
@@ -410,8 +433,6 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                   ],
                                 ),
                                 const Divider(height: 24),
-
-                                // Subscription status banner inside card
                                 Container(
                                   padding: EdgeInsets.all(12.w),
                                   decoration: BoxDecoration(
@@ -420,64 +441,109 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                         : AppTheme.error.withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(12.r),
                                   ),
-                                  child: Row(
+                                  child: Column(
                                     children: [
-                                      Icon(
-                                        hospital.isSubscriptionActive
-                                            ? Icons.verified_user
-                                            : Icons.gpp_maybe,
-                                        color: hospital.isSubscriptionActive
-                                            ? AppTheme.success
-                                            : AppTheme.error,
-                                        size: 22.w,
-                                      ),
-                                      SizedBox(width: 10.w),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              hospital.isSubscriptionActive
-                                                  ? 'Subscription Active (25 FCFA/mo)'
-                                                  : 'Subscription Expired / Inactive',
-                                              style: TextStyle(
-                                                fontSize: 13.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color: hospital.isSubscriptionActive
-                                                    ? AppTheme.success
-                                                    : AppTheme.error,
-                                              ),
-                                            ),
-                                            if (hospital.subscriptionEndDate != null) ...[
-                                              SizedBox(height: 2.h),
-                                              Text(
-                                                'Valid until: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
-                                                style: TextStyle(
-                                                  fontSize: 11.sp,
-                                                  color: AppTheme.onSurfaceVariant,
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            hospital.isSubscriptionActive
+                                                ? Icons.verified_user
+                                                : Icons.gpp_maybe,
+                                            color: hospital.isSubscriptionActive
+                                                ? AppTheme.success
+                                                : AppTheme.error,
+                                            size: 22.w,
+                                          ),
+                                          SizedBox(width: 10.w),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  hospital.isSubscriptionActive
+                                                      ? 'Subscription Active (25 FCFA/mo)'
+                                                      : 'Subscription Expired / Inactive',
+                                                  style: TextStyle(
+                                                    fontSize: 13.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: hospital.isSubscriptionActive
+                                                        ? AppTheme.success
+                                                        : AppTheme.error,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
+                                                if (hospital.subscriptionEndDate != null) ...[
+                                                  SizedBox(height: 2.h),
+                                                  Text(
+                                                    'Valid until: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
+                                                    style: TextStyle(
+                                                      fontSize: 11.sp,
+                                                      color: AppTheme.onSurfaceVariant,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (hospital.isSubscriptionActive && hospital.subscriptionEndDate != null) ...[
+                                                  SizedBox(height: 2.h),
+                                                  Row(
+                                                    children: [
+                                                      Icon(Icons.hourglass_bottom_rounded, size: 12.sp, color: AppTheme.success),
+                                                      SizedBox(width: 4.w),
+                                                      Text(
+                                                        countdownText,
+                                                        style: TextStyle(
+                                                          fontSize: 11.sp,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: AppTheme.success,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pushNamed(
-                                            '/hospital-subscription-history',
-                                            arguments: {'hospitalId': hospital.id},
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                                          backgroundColor: AppTheme.primaryColor,
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        child: Text(
-                                          'Invoices & Renew',
-                                          style: TextStyle(fontSize: 11.sp),
-                                        ),
+                                      SizedBox(height: 12.h),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              Navigator.of(context).pushNamed(
+                                                '/hospital-subscription-history',
+                                                arguments: {'hospitalId': hospital.id},
+                                              );
+                                            },
+                                            icon: const Icon(Icons.receipt_long_rounded, size: 14),
+                                            label: Text('Invoices', style: TextStyle(fontSize: 11.sp)),
+                                          ),
+                                          SizedBox(width: 8.w),
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              Navigator.of(context).pushNamed(
+                                                '/hospital-subscription-payment',
+                                                arguments: {
+                                                  'hospitalId': hospital.id,
+                                                  'hospitalName': hospital.name,
+                                                },
+                                              ).then((_) {
+                                                _refreshData();
+                                              });
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                                              backgroundColor: AppTheme.primaryColor,
+                                              foregroundColor: Colors.white,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                            icon: const Icon(Icons.autorenew_rounded, size: 14),
+                                            label: Text(
+                                              'Renew Subscription',
+                                              style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

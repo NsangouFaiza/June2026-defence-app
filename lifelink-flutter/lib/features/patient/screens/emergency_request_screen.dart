@@ -117,6 +117,7 @@ class _EmergencyRequestScreenState extends ConsumerState<EmergencyRequestScreen>
                 ),
                 SizedBox(height: 24.h),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Blood Group',
                     prefixIcon: Icon(Icons.bloodtype_outlined),
@@ -145,6 +146,7 @@ class _EmergencyRequestScreenState extends ConsumerState<EmergencyRequestScreen>
                 ),
                 SizedBox(height: 16.h),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Urgency Level',
                     prefixIcon: Icon(Icons.priority_high),

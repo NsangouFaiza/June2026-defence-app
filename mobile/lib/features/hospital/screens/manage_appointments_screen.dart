@@ -158,6 +158,7 @@ class _ManageAppointmentsScreenState extends ConsumerState<ManageAppointmentsScr
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<DonorModel>(
+                    isExpanded: true,
                     value: selectDonor,
                     decoration: const InputDecoration(labelText: 'Select Donor'),
                     items: _donors
@@ -202,6 +203,7 @@ class _ManageAppointmentsScreenState extends ConsumerState<ManageAppointmentsScr
                   isSlotsLoading
                       ? const Center(child: CircularProgressIndicator())
                       : DropdownButtonFormField<String>(
+                          isExpanded: true,
                           value: selectTimeSlot,
                           decoration: const InputDecoration(labelText: 'Available Time Slot'),
                           items: (availableSlots.isEmpty ? ['08:00', '10:00', '14:00'] : availableSlots)
@@ -359,6 +361,7 @@ class _ManageAppointmentsScreenState extends ConsumerState<ManageAppointmentsScr
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: _selectedStatusFilter,
                         decoration: const InputDecoration(labelText: 'Status Filter', isDense: true),
                         items: const [
@@ -561,6 +564,7 @@ class _ManageAppointmentsScreenState extends ConsumerState<ManageAppointmentsScr
                   ),
                   SizedBox(height: 12.h),
                   DropdownButtonFormField<DonorModel?>(
+                    isExpanded: true,
                     value: _selectedNotificationRecipient,
                     decoration: const InputDecoration(labelText: 'Recipient Target'),
                     items: [

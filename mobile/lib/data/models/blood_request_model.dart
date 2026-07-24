@@ -19,6 +19,7 @@ class BloodRequestModel {
   final String? donorName;
   final String? donorPhone;
   final String? donorEmail;
+  final Map<String, dynamic>? appointmentDetails;
 
   BloodRequestModel({
     required this.id,
@@ -41,6 +42,7 @@ class BloodRequestModel {
     this.donorName,
     this.donorPhone,
     this.donorEmail,
+    this.appointmentDetails,
   });
 
   factory BloodRequestModel.fromJson(Map<String, dynamic> json) {
@@ -67,6 +69,7 @@ class BloodRequestModel {
       donorName: json['donor_name'] as String?,
       donorPhone: json['donor_phone'] as String?,
       donorEmail: json['donor_email'] as String?,
+      appointmentDetails: json['appointment_details'] as Map<String, dynamic>?,
     );
   }
 
@@ -85,6 +88,7 @@ class BloodRequestModel {
       'payment_reference': paymentReference,
       'fulfillment_type': fulfillmentType,
       'donor': donorId,
+      'appointment_details': appointmentDetails,
     };
   }
 }

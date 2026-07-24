@@ -80,6 +80,12 @@ class AdminStatisticsView(APIView):
         from inventory.models import BloodInventory
         from appointments.models import Appointment
         from campaigns.models import Campaign
+        from payments.models import Payment
+
+        successful_payments = Payment.objects.filter(status='SUCCESS')
+        total_revenue = successful_payments.aggregate(total=Sum('amount'))['total'] or 0.0
+        sub_revenue = successful_payments.filter(payment_type='HOSPITAL_SUBSCRIPTION').aggregate(total=Sum('amount'))['total'] or 0.0
+        req_revenue = successful_payments.filter(payment_type='BLOOD_REQUEST_PAYMENT').aggregate(total=Sum('amount'))['total'] or 0.0
 
         stats = {
             'total_users': User.objects.count(),
@@ -92,5 +98,8 @@ class AdminStatisticsView(APIView):
             'pending_requests': BloodRequest.objects.filter(status='PENDING').count(),
             'completed_donations': Donation.objects.filter(status='COMPLETED').count(),
             'total_blood_units': BloodInventory.objects.aggregate(total=Sum('quantity'))['total'] or 0,
+            'total_revenue': float(total_revenue),
+            'subscription_revenue': float(sub_revenue),
+            'request_revenue': float(req_revenue),
         }
         return Response(stats)

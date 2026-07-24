@@ -48,6 +48,97 @@ class _HospitalSubscriptionPaymentScreenState
 
   double get _totalAmount => _monthlyFee * _selectedMonths;
 
+  Future<void> _waitForPaymentCompletion(int paymentId, Function(Map<String, dynamic> successPayment) onSuccess) async {
+    final paymentRepo = ref.read(paymentRepositoryProvider);
+    bool completed = false;
+    int attempts = 0;
+    
+    // Show a loading/pending dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+              content: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: AppTheme.primaryColor),
+                    SizedBox(height: 20.h),
+                    Text(
+                      'Confirming Payment',
+                      style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Please check your phone and enter your Mobile Money PIN when prompted.',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Checking status (Attempt ${attempts + 1})...',
+                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade400, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Start polling
+    while (!completed && attempts < 30) { // Poll for up to 60 seconds
+      await Future.delayed(const Duration(seconds: 2));
+      attempts++;
+      try {
+        final verifyResult = await paymentRepo.verifyPayment(paymentId);
+        final verifyStatus = (verifyResult['status'] ?? 'PENDING').toString().toUpperCase();
+        if (verifyStatus == 'SUCCESS') {
+          completed = true;
+          if (mounted) {
+            Navigator.of(context).pop(); // Pop the waiting dialog
+            onSuccess(verifyResult);
+          }
+          break;
+        } else if (verifyStatus == 'FAILED') {
+          completed = true;
+          if (mounted) {
+            Navigator.of(context).pop(); // Pop the waiting dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment verification failed or was cancelled.'),
+                backgroundColor: AppTheme.error,
+              ),
+            );
+          }
+          break;
+        }
+      } catch (e) {
+        debugPrint('Error polling status: $e');
+      }
+    }
+
+    if (!completed) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Pop the waiting dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment verification timed out. If you were debited, it will reflect shortly.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _processPayment() async {
     final localization = ref.read(localizationServiceProvider);
 
@@ -75,7 +166,17 @@ class _HospitalSubscriptionPaymentScreenState
       });
 
       if (mounted) {
-        _showInvoiceDialog(result['payment'] as Map<String, dynamic>);
+        final paymentData = result['payment'] as Map<String, dynamic>;
+        final paymentId = paymentData['id'] as int;
+        final initialStatus = (paymentData['status'] ?? 'PENDING').toString().toUpperCase();
+
+        if (initialStatus == 'PENDING' && (_selectedMethod == 'MTN_MOMO' || _selectedMethod == 'ORANGE_MONEY')) {
+          _waitForPaymentCompletion(paymentId, (successPaymentJson) {
+            _showInvoiceDialog(successPaymentJson);
+          });
+        } else {
+          _showInvoiceDialog(paymentData);
+        }
       }
     } catch (e) {
       if (mounted) {

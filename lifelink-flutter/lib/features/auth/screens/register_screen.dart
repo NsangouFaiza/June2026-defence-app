@@ -537,6 +537,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ],
                 
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: localization.currentLanguage,
                   decoration: const InputDecoration(
                     labelText: 'Language / Langue',
@@ -577,6 +578,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         decoration: InputDecoration(
                           labelText: localization.translate('gender'),
                           prefixIcon: const Icon(Icons.person_outlined),
@@ -610,6 +612,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 SizedBox(height: 12.h),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: localization.translate('blood_group'),
                     prefixIcon: const Icon(Icons.bloodtype_outlined),

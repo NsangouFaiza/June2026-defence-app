@@ -8,6 +8,7 @@ import '../../../data/models/blood_request_model.dart';
 import '../../../data/repositories/request_repository.dart';
 import '../../../data/models/donor_model.dart';
 import '../../../data/repositories/donor_repository.dart';
+import 'donor_selection_dialog.dart';
 
 class BloodRequestsListScreen extends ConsumerStatefulWidget {
   const BloodRequestsListScreen({super.key});
@@ -62,15 +63,10 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
     }
   }
 
-  Future<void> _handleApprove(int id) async {
+  Future<void> _handleApprove(BloodRequestModel request) async {
     final localization = ref.read(localizationServiceProvider);
+    final id = request.id;
     
-    // Fetch donors
-    List<DonorModel> donors = [];
-    try {
-      donors = await ref.read(donorRepositoryProvider).getDonors();
-    } catch (_) {}
-
     String selectedType = 'DIRECT_DONATION';
     DonorModel? selectedDonor;
 
@@ -114,33 +110,64 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                     ),
                     if (selectedType == 'DIRECT_DONATION') ...[
                       SizedBox(height: 16.h),
-                      const Text(
-                        'Select Donor (Optional):',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 8.h),
-                      DropdownButtonFormField<DonorModel?>(
-                        value: selectedDonor,
-                        decoration: const InputDecoration(
-                          labelText: 'Assigned Donor',
-                          border: OutlineInputBorder(),
-                        ),
-                        hint: const Text('Select a donor...'),
-                        items: [
-                          const DropdownMenuItem<DonorModel?>(
-                            value: null,
-                            child: Text('None (Unassigned)'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Assigned Donor:',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  selectedDonor != null
+                                      ? '${selectedDonor!.fullName} (${selectedDonor!.bloodGroup})'
+                                      : 'No donor assigned',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedDonor != null ? AppTheme.primaryColor : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          ...donors.map((d) => DropdownMenuItem<DonorModel?>(
-                                value: d,
-                                child: Text('${d.fullName} (${d.bloodGroup ?? "N/A"})'),
-                              )),
+                          ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                final hospitals = await ref.read(hospitalRepositoryProvider).getHospitals();
+                                final requestHospital = hospitals.firstWhere(
+                                  (h) => h.id == request.hospitalId || h.name == request.hospitalName,
+                                  orElse: () => hospitals.first,
+                                );
+                                if (!context.mounted) return;
+                                final chosen = await showDialog<DonorModel>(
+                                  context: context,
+                                  builder: (context) => DonorSelectionDialog(
+                                    hospital: requestHospital,
+                                    initialBloodGroup: request.bloodGroup,
+                                  ),
+                                );
+                                if (chosen != null) {
+                                  setDialogState(() {
+                                    selectedDonor = chosen;
+                                  });
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to load hospitals: $e')),
+                                );
+                              }
+                            },
+                            child: const Text('Search'),
+                          ),
                         ],
-                        onChanged: (val) {
-                          setDialogState(() {
-                            selectedDonor = val;
-                          });
-                        },
                       ),
                     ],
                   ],
@@ -253,33 +280,64 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                     ),
                     if (selectedType == 'DIRECT_DONATION') ...[
                       SizedBox(height: 16.h),
-                      const Text(
-                        'Select Donor (Optional):',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 8.h),
-                      DropdownButtonFormField<DonorModel?>(
-                        value: selectedDonor,
-                        decoration: const InputDecoration(
-                          labelText: 'Assigned Donor',
-                          border: OutlineInputBorder(),
-                        ),
-                        hint: const Text('Select a donor...'),
-                        items: [
-                          const DropdownMenuItem<DonorModel?>(
-                            value: null,
-                            child: Text('None (Unassigned)'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Assigned Donor:',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  selectedDonor != null
+                                      ? '${selectedDonor!.fullName} (${selectedDonor!.bloodGroup})'
+                                      : 'No donor assigned',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedDonor != null ? AppTheme.primaryColor : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          ...donors.map((d) => DropdownMenuItem<DonorModel?>(
-                                value: d,
-                                child: Text('${d.fullName} (${d.bloodGroup ?? "N/A"})'),
-                              )),
+                          ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                final hospitals = await ref.read(hospitalRepositoryProvider).getHospitals();
+                                final requestHospital = hospitals.firstWhere(
+                                  (h) => h.id == request.hospitalId || h.name == request.hospitalName,
+                                  orElse: () => hospitals.first,
+                                );
+                                if (!context.mounted) return;
+                                final chosen = await showDialog<DonorModel>(
+                                  context: context,
+                                  builder: (context) => DonorSelectionDialog(
+                                    hospital: requestHospital,
+                                    initialBloodGroup: request.bloodGroup,
+                                  ),
+                                );
+                                if (chosen != null) {
+                                  setDialogState(() {
+                                    selectedDonor = chosen;
+                                  });
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to load hospitals: $e')),
+                                );
+                              }
+                            },
+                            child: const Text('Search'),
+                          ),
                         ],
-                        onChanged: (val) {
-                          setDialogState(() {
-                            selectedDonor = val;
-                          });
-                        },
                       ),
                     ],
                   ],
@@ -786,6 +844,86 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                 ],
               ),
             ),
+            if (request.appointmentDetails != null && request.status.toUpperCase() != 'FULFILLED') ...[
+              SizedBox(height: 12.h),
+              Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: Colors.teal.withOpacity(0.15), width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.event_available_rounded, color: Colors.teal, size: 18),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Blood Request Summary / Appointment Details',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Hospital:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
+                        Text(request.appointmentDetails!['hospital_name'] ?? 'Hospital Clinic', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    if (request.appointmentDetails!['hospital_address'] != null && request.appointmentDetails!['hospital_address'].toString().isNotEmpty) ...[
+                      SizedBox(height: 4.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Address:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
+                          Text(request.appointmentDetails!['hospital_address'], style: TextStyle(fontSize: 11.sp)),
+                        ],
+                      ),
+                    ],
+                    SizedBox(height: 4.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Scheduled Date:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
+                        Text(request.appointmentDetails!['date'] ?? 'N/A', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Scheduled Time:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
+                        Text(request.appointmentDetails!['time'] ?? '09:00 AM', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Appointment Status:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
+                        Text(
+                          (request.appointmentDetails!['status'] ?? 'SCHEDULED').toString().toUpperCase(),
+                          style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 12),
+                    Text(
+                      'Instructions: Please keep track of these appointment details. The donor will present themselves to fulfill the donation.',
+                      style: TextStyle(fontSize: 10.sp, fontStyle: FontStyle.italic, color: Colors.teal.shade700),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
 
           // Actions Divider
@@ -829,15 +967,41 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
             ),
           ] else if (isPatient && request.paymentStatus.toUpperCase() == 'PAID') ...[
             const Divider(height: 24, thickness: 1),
-            Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppTheme.success, size: 16),
-                SizedBox(width: 6.w),
-                Text(
-                  'Paid - Ref: ${request.paymentReference ?? "N/A"}',
-                  style: TextStyle(fontSize: 12.sp, color: AppTheme.success, fontWeight: FontWeight.bold),
-                ),
-              ],
+            Container(
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: AppTheme.success.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded, color: AppTheme.success, size: 18),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Status: Paid',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppTheme.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Payment has been successfully received. Ref: ${request.paymentReference ?? "N/A"}',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: AppTheme.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
 
@@ -853,7 +1017,7 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                 ),
                 SizedBox(width: 12.w),
                 ElevatedButton(
-                  onPressed: () => _handleApprove(request.id),
+                  onPressed: () => _handleApprove(request),
                   style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
                   child: const Text('Approve'),
                 ),

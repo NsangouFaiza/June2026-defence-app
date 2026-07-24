@@ -137,10 +137,12 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             
         else: # DIRECT_DONATION
             donor_id = request.data.get('donor_id')
+            assigned_donor = None
             if donor_id:
                 from donors.models import Donor
                 try:
-                    blood_request.donor = Donor.objects.get(pk=donor_id)
+                    assigned_donor = Donor.objects.get(pk=donor_id)
+                    blood_request.donor = assigned_donor
                 except Donor.DoesNotExist:
                     return Response({'error': 'Invalid donor ID'}, status=status.HTTP_400_BAD_REQUEST)
             else:
@@ -151,6 +153,9 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             blood_request.fulfillment_type = 'DIRECT_DONATION'
             blood_request.processed_by = request.user
             blood_request.save()
+
+            if assigned_donor:
+                self._schedule_direct_donation_appointment(blood_request, assigned_donor)
             
             # Save history log
             from audit.models import AuditLog
@@ -186,16 +191,21 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             # If remaining in direct donation, check if they are just assigning/updating a donor
             if new_type == 'DIRECT_DONATION':
                 donor_id = request.data.get('donor_id')
+                assigned_donor = None
                 if donor_id:
                     from donors.models import Donor
                     try:
-                        blood_request.donor = Donor.objects.get(pk=donor_id)
+                        assigned_donor = Donor.objects.get(pk=donor_id)
+                        blood_request.donor = assigned_donor
                         blood_request.save()
                     except Donor.DoesNotExist:
                         return Response({'error': 'Invalid donor ID'}, status=status.HTTP_400_BAD_REQUEST)
                 elif 'donor_id' in request.data:
                     blood_request.donor = None
                     blood_request.save()
+
+                if assigned_donor:
+                    self._schedule_direct_donation_appointment(blood_request, assigned_donor)
                     
             serializer = self.get_serializer(blood_request)
             return Response(serializer.data)
@@ -354,4 +364,56 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             pass
         serializer = self.get_serializer(blood_request)
         return Response(serializer.data)
+
+    def _schedule_direct_donation_appointment(self, blood_request, donor):
+        from appointments.models import Appointment
+        from notifications.models import Notification
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Check if an appointment already exists for this blood request
+        appointment = Appointment.objects.filter(blood_request=blood_request).first()
+        tomorrow = timezone.now().date() + timedelta(days=1)
+        
+        if not appointment:
+            appointment = Appointment.objects.create(
+                donor=donor,
+                hospital=blood_request.hospital,
+                blood_request=blood_request,
+                scheduled_date=tomorrow,
+                scheduled_time="09:00:00",
+                status='SCHEDULED',
+                notes=f"Automatically scheduled for Direct Donation blood request #{blood_request.id}."
+            )
+            
+            # Notify Donor
+            Notification.objects.create(
+                recipient=donor.user,
+                notification_type='APPOINTMENT_REMINDER',
+                title='Direct Donation Scheduled / Don Direct Planifié',
+                message=f"An emergency appointment has been scheduled for you to donate blood at {blood_request.hospital.name} for request ref #{blood_request.id}.\nDate: {tomorrow}\nTime: 09:00 AM\nLocation: {blood_request.hospital.address or 'Hospital Clinic'}.",
+                data={'blood_request_id': blood_request.id, 'appointment_id': appointment.id}
+            )
+            
+            # Notify Patient
+            Notification.objects.create(
+                recipient=blood_request.patient.user,
+                notification_type='REQUEST_UPDATE',
+                title='Donor Assigned & Appointment Scheduled / Donneur Assigné & RDV Planifié',
+                message=f"A compatible donor ({donor.user.full_name}) has been assigned to your blood request ref #{blood_request.id}.\nAppointment Scheduled at {blood_request.hospital.name}.\nDate: {tomorrow}\nTime: 09:00 AM.",
+                data={'blood_request_id': blood_request.id, 'appointment_id': appointment.id}
+            )
+        else:
+            if appointment.donor != donor:
+                appointment.donor = donor
+                appointment.save()
+                
+                # Notify New Donor
+                Notification.objects.create(
+                    recipient=donor.user,
+                    notification_type='APPOINTMENT_REMINDER',
+                    title='Direct Donation Scheduled / Don Direct Planifié',
+                    message=f"You have been assigned to donate blood for request ref #{blood_request.id} at {blood_request.hospital.name}.\nDate: {appointment.scheduled_date}\nTime: {appointment.scheduled_time}\nLocation: {blood_request.hospital.address or 'Hospital Clinic'}.",
+                    data={'blood_request_id': blood_request.id, 'appointment_id': appointment.id}
+                )
 
