@@ -25,6 +25,32 @@ class DonorViewSet(viewsets.ModelViewSet):
             return DonorDetailSerializer
         return DonorSerializer
 
+    def get_queryset(self):
+        queryset = Donor.objects.select_related('user').all()
+        blood_group = self.request.query_params.get('blood_group') or self.request.query_params.get('bloodGroup')
+        eligibility = self.request.query_params.get('eligibility') or self.request.query_params.get('is_eligible')
+        region = self.request.query_params.get('region')
+        city = self.request.query_params.get('city')
+
+        if blood_group and blood_group.lower() != 'all':
+            queryset = queryset.filter(user__blood_group__iexact=blood_group)
+
+        if eligibility and eligibility.lower() != 'all':
+            elig_str = str(eligibility).lower()
+            if elig_str in ('eligible', 'true'):
+                queryset = queryset.filter(is_eligible=True, eligibility_status='eligible')
+            elif elig_str in ('ineligible', 'not_eligible', 'false'):
+                queryset = queryset.filter(Q(is_eligible=False) | ~Q(eligibility_status='eligible'))
+
+        if region and region.lower() != 'all':
+            queryset = queryset.filter(user__region__icontains=region)
+
+        if city and city.lower() != 'all':
+            queryset = queryset.filter(user__city__icontains=city)
+
+        return queryset
+
+
     @action(detail=False, methods=['get'])
     def eligible(self, request):
         """Get eligible donors."""

@@ -53,21 +53,31 @@ class Hospital(models.Model):
         from django.utils import timezone
         return self.subscription_end_date >= timezone.now()
 
-    def extend_subscription(self, months: int = 1):
-        """Extend subscription end date by given number of months."""
+    def extend_subscription(self, months: int = 1, payment_date=None):
+        """Extend subscription end date by given number of calendar months."""
         from django.utils import timezone
-        from datetime import timedelta
         now = timezone.now()
+        base_date = payment_date or now
         if self.subscription_end_date and self.subscription_end_date > now:
             base_date = self.subscription_end_date
-        else:
-            base_date = now
-        # Extend by 30 days per month
-        self.subscription_end_date = base_date + timedelta(days=30 * months)
+
+        try:
+            from dateutil.relativedelta import relativedelta
+            new_end = base_date + relativedelta(months=months)
+        except ImportError:
+            import calendar
+            month = base_date.month - 1 + months
+            year = base_date.year + month // 12
+            month = month % 12 + 1
+            day = min(base_date.day, calendar.monthrange(year, month)[1])
+            new_end = base_date.replace(year=year, month=month, day=day)
+
+        self.subscription_end_date = new_end
         self.subscription_status = 'ACTIVE'
         self.is_active = True
         self.save(update_fields=['subscription_end_date', 'subscription_status', 'is_active', 'updated_at'])
         return self.subscription_end_date
+
 
 
 

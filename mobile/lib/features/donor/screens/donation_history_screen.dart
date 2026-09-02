@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/donation_repository.dart';
 import '../../../../data/models/donation_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class DonationHistoryScreen extends ConsumerWidget {
   const DonationHistoryScreen({super.key});
@@ -16,13 +17,10 @@ class DonationHistoryScreen extends ConsumerWidget {
     final donationRepo = ref.watch(donationRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('donation_history')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('donation_history'),
       ),
+
       body: FutureBuilder<List<DonationModel>>(
         future: donationRepo.getDonationHistory(),
         builder: (context, snapshot) {

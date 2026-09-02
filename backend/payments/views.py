@@ -107,24 +107,44 @@ class PaymentActionViewSet(viewsets.ViewSet):
         print(f"Payload: {request.data}", flush=True)
 
         payment_id = request.data.get('payment_id')
-        if not payment_id:
-            return Response({'error': 'payment_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        transaction_id = request.data.get('transaction_id')
+        reference = request.data.get('reference')
+        
+        q = Q()
+        if payment_id:
+            q |= Q(pk=payment_id)
+        if transaction_id:
+            q |= Q(transaction_id=transaction_id)
+        if reference:
+            q |= Q(transaction_reference=reference) | Q(external_reference=reference)
+            
+        if not q:
+            return Response({'error': 'payment_id, transaction_id, or reference is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            payment = Payment.objects.get(pk=payment_id, user=request.user)
-        except Payment.DoesNotExist:
+        payment = Payment.objects.filter(q).first()
+        if not payment:
             return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        if payment.payment_method in ('MTN_MOMO', 'ORANGE_MONEY') and (payment.transaction_reference or payment.external_reference):
-            ref_to_check = payment.transaction_reference or payment.external_reference
+        if payment.transaction_reference or payment.external_reference or payment.transaction_id:
+            ref_to_check = payment.transaction_reference or payment.external_reference or payment.transaction_id
             provider = get_payment_provider(payment.payment_method)
             result = provider.verify(ref_to_check)
-            payment.status = result.status
-            payment.payment_status = result.status
-            payment.response_data = result.response_data
             if result.status == 'SUCCESS':
-                payment.paid_at = timezone.now()
-            payment.save()
+                from .services import process_successful_payment
+                payment = process_successful_payment(
+                    payment_id=payment.id,
+                    transaction_reference=ref_to_check,
+                    phone_number=payment.phone_number,
+                    payment_method=payment.payment_method,
+                    amount=payment.amount,
+                    paid_at=timezone.now(),
+                    response_data=result.response_data
+                )
+            else:
+                payment.status = result.status
+                payment.payment_status = result.status
+                payment.response_data = result.response_data
+                payment.save()
 
         serializer = PaymentSerializer(payment)
         return Response(serializer.data)
@@ -135,7 +155,7 @@ class PaymentHistoryView(APIView):
 
     def get(self, request):
         user = request.user
-        role = user.role.lower()
+        role = user.role.lower() if user.role else 'patient'
         
         # Auto-verify any pending payments before listing history
         from payments.models import verify_pending_payments
@@ -163,9 +183,9 @@ class PaymentHistoryView(APIView):
                 sub_period = f"{max(1, int(p.amount // 25))} Month(s)" if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
                 receipts.append({
                     'id': p.id,
-                    'receipt_number': p.transaction_id or inv_num,
+                    'receipt_number': p.receipts.first().receipt_number if p.receipts.exists() else (p.transaction_id or inv_num),
                     'transaction_reference': p.transaction_reference or p.external_reference or p.transaction_id or "N/A",
-                    'user_name': p.user.full_name if p.user else p.hospital.name if p.hospital else "System",
+                    'user_name': p.user.full_name if p.user else (p.hospital.name if p.hospital else "System"),
                     'user_role': p.user.role if p.user else "hospital_staff",
                     'created_at': p.created_at.isoformat(),
                     'payment_type': 'Hospital Subscription' if p.payment_type == 'HOSPITAL_SUBSCRIPTION' else 'Blood Request Payment',
@@ -185,7 +205,7 @@ class PaymentHistoryView(APIView):
                 h_name = p.blood_request.hospital.name if p.blood_request and p.blood_request.hospital else "N/A"
                 receipts.append({
                     'id': p.id,
-                    'receipt_number': p.transaction_id or inv_num,
+                    'receipt_number': p.receipts.first().receipt_number if p.receipts.exists() else (p.transaction_id or inv_num),
                     'transaction_reference': p.transaction_reference or p.external_reference or p.transaction_id or "N/A",
                     'user_name': user.full_name,
                     'user_role': 'Patient',
@@ -211,7 +231,7 @@ class PaymentHistoryView(APIView):
                     sub_period = f"{max(1, int(s.amount // 25))} Month(s)" if s.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
                     receipts.append({
                         'id': s.id,
-                        'receipt_number': s.transaction_id or inv_num,
+                        'receipt_number': s.receipts.first().receipt_number if s.receipts.exists() else (s.transaction_id or inv_num),
                         'transaction_reference': s.transaction_reference or s.external_reference or s.transaction_id or "N/A",
                         'user_name': user.full_name,
                         'user_role': 'Hospital Staff',
@@ -236,41 +256,53 @@ class CampayWebhookView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        logger.info(f"Campay webhook payload received: {request.data}")
-        ref = request.data.get('reference')
-        status_raw = request.data.get('status')
-        ext_ref = request.data.get('external_reference')
+        logger.info(f"[CampayWebhookTrace] Webhook payload received: {request.data}")
+        data = request.data or {}
+        ref = data.get('reference') or data.get('id') or data.get('transaction_id')
+        status_raw = str(data.get('status', '')).upper()
+        ext_ref = data.get('external_reference') or data.get('ext_ref')
 
-        if not ref:
+        if not ref and not ext_ref:
             return Response({'error': 'Reference missing'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Lookup payment record (using Campay reference or internal reference keys)
-        payment = Payment.objects.filter(Q(transaction_reference=ref) | Q(transaction_id=ext_ref) | Q(external_reference=ref)).first()
-        if not payment:
-            # Fallback to direct check on transaction_reference
-            payment = Payment.objects.filter(transaction_reference=ref).first()
+        payment = Payment.objects.filter(
+            Q(transaction_reference=ref) |
+            Q(external_reference=ref) |
+            Q(transaction_id=ref) |
+            Q(transaction_id=ext_ref) |
+            Q(transaction_reference=ext_ref) |
+            Q(external_reference=ext_ref)
+        ).first()
 
         if not payment:
-            logger.error(f"Campay webhook payment not found for reference: {ref}")
+            logger.error(f"[CampayWebhookTrace] Campay webhook payment not found for reference: {ref}, ext_ref: {ext_ref}")
             return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # Secure Verification: Verify status directly against Campay gateway endpoint
+        ref_to_check = payment.transaction_reference or payment.external_reference or ref
         provider = get_payment_provider(payment.payment_method)
-        result = provider.verify(ref)
+        result = provider.verify(ref_to_check)
 
-        if result.status == 'SUCCESS':
-            payment.status = 'SUCCESS'
-            payment.payment_status = 'SUCCESS'
-            payment.paid_at = timezone.now()
-            payment.response_data = result.response_data
-            payment.save()
-            logger.info(f"Campay payment {payment.transaction_id} verified successfully via webhook.")
-        elif result.status == 'FAILED':
+        if result.status == 'SUCCESS' or status_raw in ('SUCCESSFUL', 'SUCCESS', 'PAID', 'COMPLETED'):
+            from .services import process_successful_payment
+            process_successful_payment(
+                payment_id=payment.id,
+                transaction_reference=ref_to_check,
+                phone_number=payment.phone_number,
+                payment_method=payment.payment_method,
+                amount=payment.amount,
+                paid_at=timezone.now(),
+                response_data=result.response_data or data
+            )
+            logger.info(f"[CampayWebhookTrace] Campay payment {payment.transaction_id} verified successfully via webhook.")
+        elif result.status == 'FAILED' or status_raw in ('FAILED', 'CANCELLED', 'DECLINED'):
             payment.status = 'FAILED'
             payment.payment_status = 'FAILED'
-            payment.response_data = result.response_data
+            payment.response_data = result.response_data or data
             payment.save()
-            logger.info(f"Campay payment {payment.transaction_id} marked FAILED via webhook.")
+            logger.info(f"[CampayWebhookTrace] Campay payment {payment.transaction_id} marked FAILED via webhook.")
 
         return Response({'status': 'acknowledged'}, status=status.HTTP_200_OK)
+
 

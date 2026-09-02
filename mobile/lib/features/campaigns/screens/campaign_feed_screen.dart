@@ -7,6 +7,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/campaign_repository.dart';
 import '../../../../data/models/campaign_model.dart';
 import 'campaign_details_screen.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class CampaignFeedScreen extends ConsumerWidget {
   const CampaignFeedScreen({super.key});
@@ -17,9 +18,10 @@ class CampaignFeedScreen extends ConsumerWidget {
     final campaignRepo = ref.watch(campaignRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('campaigns')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('campaigns'),
       ),
+
       body: FutureBuilder<List<CampaignModel>>(
         future: campaignRepo.getCampaigns(),
         builder: (context, snapshot) {

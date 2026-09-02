@@ -6,8 +6,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/payment_repository.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
+
   final int requestId;
   final double amount;
 
@@ -266,13 +268,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('payment')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('payment'),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),

@@ -6,8 +6,10 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/appointment_repository.dart';
 import '../../../../data/models/appointment_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class AppointmentHistoryScreen extends ConsumerStatefulWidget {
+
   const AppointmentHistoryScreen({super.key});
 
   @override
@@ -161,15 +163,16 @@ class _AppointmentHistoryScreenState extends ConsumerState<AppointmentHistoryScr
     final appointmentRepo = ref.watch(appointmentRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('appointment_history')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('appointment_history'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _refresh,
           ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.of(context).pushNamed('/book-appointment');

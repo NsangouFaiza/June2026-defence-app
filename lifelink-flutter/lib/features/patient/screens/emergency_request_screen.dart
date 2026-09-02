@@ -6,8 +6,10 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/request_repository.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class EmergencyRequestScreen extends ConsumerStatefulWidget {
+
   const EmergencyRequestScreen({super.key});
 
   @override
@@ -79,14 +81,11 @@ class _EmergencyRequestScreenState extends ConsumerState<EmergencyRequestScreen>
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('emergency_request')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('emergency_request'),
         backgroundColor: AppTheme.error,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),

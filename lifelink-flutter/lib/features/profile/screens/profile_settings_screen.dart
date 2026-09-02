@@ -11,6 +11,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../data/models/user_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class ProfileSettingsScreen extends ConsumerWidget {
   const ProfileSettingsScreen({super.key});
@@ -21,9 +22,10 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('profile_settings')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('profile_settings'),
       ),
+
       body: userAsync.when(
         data: (user) => user != null ? _buildProfile(context, ref, user, localization) : const Center(child: Text('User not found')),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -210,7 +212,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
+                            SnackBar(content: Text('${localization.translate('error')}: $e')),
                           );
                         }
                       }
@@ -218,7 +220,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   ),
                   SwitchListTile(
                     title: Text(localization.translate('dark_mode')),
-                    subtitle: const Text('Enable dark mode'),
+                    subtitle: Text(localization.translate('enable_dark_mode')),
                     value: ref.watch(themeModeProvider) == ThemeMode.dark,
                     onChanged: (value) {
                       ref.read(themeModeProvider.notifier).toggleTheme(value);
@@ -281,7 +283,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   title: Text(localization.translate('change_password')),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
-                    // Navigate to change password
+                    Navigator.of(context).pushNamed('/change-password');
                   },
                 ),
                 const Divider(height: 1),
@@ -290,7 +292,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   title: Text(localization.translate('security_settings')),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
-                    // Navigate to security settings
+                    Navigator.of(context).pushNamed('/security-settings');
                   },
                 ),
               ],

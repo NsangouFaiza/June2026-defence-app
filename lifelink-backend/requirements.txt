@@ -20,6 +20,7 @@ django-anymail==10.2
 # Utilities
 python-decouple==3.8
 Pillow>=10.4.0
+reportlab>=4.0.0
 
 # Firebase Admin (push notifications - optional)
 firebase-admin>=6.2.0

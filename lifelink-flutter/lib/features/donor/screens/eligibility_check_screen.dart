@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/eligibility_repository.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class EligibilityCheckScreen extends ConsumerStatefulWidget {
   const EligibilityCheckScreen({super.key});
@@ -16,6 +17,7 @@ class EligibilityCheckScreen extends ConsumerStatefulWidget {
 
 class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen> {
   final _formKey = GlobalKey<FormState>();
+
   int _age = 25;
   double _weight = 70;
   bool _hasRecentSurgery = false;
@@ -27,13 +29,16 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
   String? _result;
 
   Future<void> _checkEligibility() async {
+    final localization = ref.read(localizationServiceProvider);
+
     if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
     setState(() => _isLoading = true);
 
     try {
-      final eligibilityRepo = ref.read(eligibilityRepositoryProvider);
-      final result = await eligibilityRepo.checkEligibility({
+      final repo = ref.read(eligibilityRepositoryProvider);
+      final result = await repo.checkEligibility({
         'age': _age,
         'weight': _weight,
         'has_recent_surgery': _hasRecentSurgery,
@@ -48,13 +53,44 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('You are eligible! Redirecting to booking...')),
         );
-        Navigator.of(context).pushReplacementNamed('/book-appointment');
       }
     } catch (e) {
-      setState(() => _result = 'ERROR');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error checking eligibility: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+
+  void _showResultDialog(Map<String, dynamic> result) {
+    final isEligible = result['is_eligible'] as bool? ?? false;
+    final reason = result['reason'] as String? ?? '';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isEligible ? 'Eligible to Donate!' : 'Not Eligible Currently'),
+        content: Text(
+          isEligible
+              ? 'Great news! You meet the initial health guidelines to donate blood.'
+              : reason.isNotEmpty
+                  ? reason
+                  : 'Based on your entries, you do not meet the criteria at this time.',
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -62,12 +98,8 @@ class _EligibilityCheckScreenState extends ConsumerState<EligibilityCheckScreen>
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('eligibility_check')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('eligibility_check'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/community_repository.dart';
 import '../../../../data/models/leaderboard_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class LeaderboardScreen extends ConsumerWidget {
   const LeaderboardScreen({super.key});
@@ -18,19 +19,19 @@ class LeaderboardScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(localization.translate('leaderboard')),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
+        appBar: LifeLinkAppBar(
+          title: localization.translate('leaderboard'),
           bottom: TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             tabs: [
               Tab(text: localization.translate('top_donors')),
               Tab(text: localization.translate('top_regions')),
             ],
           ),
         ),
+
         body: TabBarView(
           children: [
             _buildTopDonorsTab(context, ref, communityRepo, localization),

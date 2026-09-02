@@ -52,37 +52,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           showDialog(
             context: context,
             builder: (dialogContext) => AlertDialog(
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('Subscription Expired')),
+                  const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(localization.translate('subscription_expired'))),
                 ],
               ),
-              content: const Text(
-                'Your hospital subscription has expired or been deactivated. Please renew the monthly subscription (25 FCFA/month) to access the application.',
+              content: Text(
+                localization.translate('subscription_expired_desc'),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(localization.translate('cancel')),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                     Navigator.of(context).pushNamed('/hospital-subscription-payment');
                   },
-                  child: const Text('Renew Subscription'),
+                  child: Text(localization.translate('renew_subscription')),
                 ),
               ],
             ),
           );
         } else {
+          final cleanErr = e.toString().replaceAll('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${localization.translate('error')}: ${e.toString()}')),
+            SnackBar(
+              content: Text(cleanErr),
+              backgroundColor: AppTheme.error,
+            ),
           );
         }
       }
+
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -95,7 +100,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -204,7 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         localization.translate('welcome_back'),
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.onSurface,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -212,7 +216,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         localization.translate('sign_in_to_continue'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.onSurfaceVariant,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -255,6 +259,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       SizedBox(height: 16.h),
                       TextFormField(
                         controller: _passwordController,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        keyboardType: TextInputType.visiblePassword,
+                        obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           labelText: localization.translate('password'),
                           prefixIcon: const Icon(Icons.lock_outlined),
@@ -268,7 +276,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             },
                           ),
                         ),
-                        obscureText: _obscurePassword,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return localization.translate('please_enter_password');
@@ -307,12 +314,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             : Text(localization.translate('login')),
                       ),
                       SizedBox(height: 24.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             localization.translate('dont_have_account'),
-                            style: TextStyle(color: AppTheme.onSurfaceVariant),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                           TextButton(
                             onPressed: () {

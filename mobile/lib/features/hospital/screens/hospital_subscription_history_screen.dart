@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/payment_repository.dart';
 import '../../payment/screens/hospital_subscription_payment_screen.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
+
 
 class HospitalSubscriptionHistoryScreen extends ConsumerStatefulWidget {
+
   final int? hospitalId;
 
   const HospitalSubscriptionHistoryScreen({super.key, this.hospitalId});
@@ -92,22 +96,59 @@ class _HospitalSubscriptionHistoryScreenState
             const Divider(),
             SizedBox(height: 12.h),
             _buildDetailRow('Invoice #', item['invoice_number'] ?? 'N/A', isBold: true),
+            if (item['receipt_number'] != null)
+              _buildDetailRow('Receipt #', item['receipt_number'].toString()),
             _buildDetailRow('Hospital Name', item['hospital_name'] ?? 'N/A'),
             _buildDetailRow('Paid By', item['staff_name'] ?? 'Staff Representative'),
-            _buildDetailRow('Amount Paid', '${item['amount']} FCFA', color: AppTheme.primaryColor, isBold: true),
-            _buildDetailRow('Duration', '${item['months']} Month(s)'),
+            _buildDetailRow('Amount Paid', '${item['amount'] ?? 0} ${item['currency'] ?? 'FCFA'}', color: AppTheme.primaryColor, isBold: true),
+            _buildDetailRow('Subscription Period', item['subscription_period'] ?? '${item['months'] ?? 1} Month(s)'),
             _buildDetailRow('Payment Method', item['payment_method'] ?? 'N/A'),
             _buildDetailRow('Transaction ID', item['transaction_id'] ?? 'N/A'),
-            _buildDetailRow('Status', item['status'] ?? 'SUCCESS', color: AppTheme.success),
-            _buildDetailRow('Payment Date', item['paid_at'] != null ? item['paid_at'].toString().substring(0, 10) : 'N/A'),
+            _buildDetailRow('Status', (item['status'] ?? 'SUCCESS').toString().toUpperCase(), color: AppTheme.success),
+            if (item['subscription_period_start'] != null)
+              _buildDetailRow('Start Date', item['subscription_period_start'].toString().substring(0, 10)),
             if (item['subscription_period_end'] != null)
-              _buildDetailRow('Valid Until', item['subscription_period_end'].toString().substring(0, 10), color: AppTheme.primaryColor),
-            SizedBox(height: 24.h),
+              _buildDetailRow('Expiration Date', item['subscription_period_end'].toString().substring(0, 10), color: AppTheme.primaryColor),
+            _buildDetailRow('Payment Date', item['paid_at'] != null ? item['paid_at'].toString().replaceAll('T', ' ').substring(0, 19) : item['created_at'] != null ? item['created_at'].toString().replaceAll('T', ' ').substring(0, 19) : 'N/A'),
+            SizedBox(height: 20.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Downloading Receipt #${item['receipt_number'] ?? item['invoice_number']}...')),
+                      );
+                    },
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Receipt'),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Printing Invoice #${item['invoice_number']}...')),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.print_rounded, size: 18),
+                    label: const Text('Print Invoice'),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildDetailRow(String label, String value, {Color? color, bool isBold = false}) {
     return Padding(
@@ -135,15 +176,10 @@ class _HospitalSubscriptionHistoryScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Subscription Invoices / Factures'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+      appBar: const LifeLinkAppBar(
+        title: 'Subscription Invoices / Factures',
       ),
+
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -215,11 +251,11 @@ class _HospitalSubscriptionHistoryScreenState
                                   SizedBox(height: 2.h),
                                   Text(
                                     'Paid on: ${item['created_at'] != null ? item['created_at'].toString().substring(0, 10) : ''}',
-                                    style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant),
+                                    style: TextStyle(fontSize: 12.sp, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
-                              trailing: Icon(Icons.chevron_right, color: AppTheme.onSurfaceVariant),
+                              trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
                               onTap: () => _showInvoiceModal(item),
                             ),
                           );

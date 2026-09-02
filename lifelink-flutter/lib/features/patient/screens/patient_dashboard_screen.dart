@@ -15,7 +15,6 @@ class PatientDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final localization = ref.watch(localizationServiceProvider);
     final requestRepo = ref.watch(requestRepositoryProvider);
     final userAsync = ref.watch(currentUserProvider);
     final user = userAsync.value;
@@ -23,10 +22,10 @@ class PatientDashboardScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
@@ -249,6 +248,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: _buildStatCard(
+                                    context,
                                     totalBloodPacks.toString(),
                                     'Available Blood Units',
                                     Icons.bloodtype_rounded,
@@ -259,6 +259,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                                 SizedBox(width: 12.w),
                                 Expanded(
                                   child: _buildStatCard(
+                                    context,
                                     nearbyHospitals.toString(),
                                     'Hospitals & Banks',
                                     Icons.local_hospital_rounded,
@@ -270,6 +271,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                             ),
                             SizedBox(height: 12.h),
                             _buildStatCard(
+                              context,
                               activeDonors.toString(),
                               'Registered Active Donors Nearby',
                               Icons.people_rounded,
@@ -425,6 +427,7 @@ class PatientDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     String value,
     String label,
     IconData icon,
@@ -443,7 +446,7 @@ class PatientDashboardScreen extends ConsumerWidget {
         child: Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
@@ -574,7 +577,7 @@ class PatientDashboardScreen extends ConsumerWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(

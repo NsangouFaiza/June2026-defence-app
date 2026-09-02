@@ -8,8 +8,10 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/campaign_repository.dart';
 import '../../../../data/models/campaign_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class CampaignDetailsScreen extends ConsumerStatefulWidget {
+
   final int campaignId;
 
   const CampaignDetailsScreen({super.key, required this.campaignId});
@@ -86,9 +88,10 @@ class _CampaignDetailsScreenState extends ConsumerState<CampaignDetailsScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('campaign_details')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('campaign_details'),
       ),
+
       body: FutureBuilder<CampaignModel>(
         future: _campaignFuture,
         builder: (context, snapshot) {
@@ -357,7 +360,9 @@ class _CampaignDetailsScreenState extends ConsumerState<CampaignDetailsScreen> {
                                     children: [
                                       const Icon(Icons.check_circle_outline, color: AppTheme.success, size: 18),
                                       SizedBox(width: 8.w),
-                                      Text(doc, style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade800)),
+                                      Expanded(
+                                        child: Text(doc, style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade800)),
+                                      ),
                                     ],
                                   ),
                                 );
@@ -427,6 +432,7 @@ class _CampaignDetailsScreenState extends ConsumerState<CampaignDetailsScreen> {
                   child: Row(
                     children: [
                       Expanded(
+                        flex: 2,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,29 +444,36 @@ class _CampaignDetailsScreenState extends ConsumerState<CampaignDetailsScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: campaign.isRegistered ? AppTheme.success : Colors.grey.shade600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              '${campaign.participantsCount ?? 0} donors registered',
+                              '${campaign.participantsCount ?? 0} donors',
                               style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(
-                        width: 180.w,
-                        height: 48.h,
-                        child: ElevatedButton(
-                          onPressed: isPastDeadline ? null : () => _toggleRegister(campaign),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: campaign.isRegistered ? Colors.orange[850] : AppTheme.primaryColor,
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        flex: 3,
+                        child: SizedBox(
+                          height: 48.h,
+                          child: ElevatedButton(
+                            onPressed: isPastDeadline ? null : () => _toggleRegister(campaign),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: campaign.isRegistered ? Colors.orange[850] : AppTheme.primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                           ),
-                          child: Text(
-                            isPastDeadline 
-                                ? 'RSVP Closed' 
-                                : campaign.isRegistered ? 'Cancel RSVP' : 'Register RSVP Now',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                            child: Text(
+                              isPastDeadline 
+                                  ? 'RSVP Closed' 
+                                  : campaign.isRegistered ? 'Cancel RSVP' : 'Register RSVP Now',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                            ),
                           ),
                         ),
                       ),

@@ -53,13 +53,23 @@ class HospitalViewSet(viewsets.ModelViewSet):
         """Get the hospital associated with the current user."""
         try:
             staff = HospitalStaff.objects.get(user=request.user)
-            serializer = HospitalSerializer(staff.hospital)
+            hospital = staff.hospital
+            # Auto-verify any pending payments and check subscriptions
+            from payments.models import verify_pending_payments, check_and_update_subscriptions
+            try:
+                verify_pending_payments(hospital=hospital)
+                check_and_update_subscriptions()
+                hospital.refresh_from_db()
+            except Exception:
+                pass
+            serializer = HospitalSerializer(hospital)
             return Response(serializer.data)
         except HospitalStaff.DoesNotExist:
             return Response(
                 {'detail': 'No hospital assigned to this user.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
 
     @action(detail=False, methods=['get'])
     def statistics(self, request):
@@ -171,11 +181,25 @@ class HospitalViewSet(viewsets.ModelViewSet):
             payment.status = result.status
             payment.payment_status = result.status
             payment.save()
+
+            if result.status == 'SUCCESS':
+                from payments.services import process_successful_payment
+                payment = process_successful_payment(
+                    payment_id=payment.id,
+                    transaction_reference=result.external_reference,
+                    phone_number=phone_number,
+                    payment_method=payment_method,
+                    amount=payment.amount,
+                    paid_at=now,
+                    response_data=result.response_data
+                )
+                hospital.refresh_from_db()
         except Exception as exc:
             payment.delete()
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = PaymentSerializer(payment)
+
         return Response({
             'message': 'Subscription payment initiated',
             'payment': serializer.data,
@@ -185,31 +209,50 @@ class HospitalViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def subscription_history(self, request):
         """Get payment history and invoices for a hospital."""
-        # Auto-verify pending payments first
         from payments.models import verify_pending_payments
-        if request.user.is_authenticated:
+        from hospitals.models import HospitalStaff
+
+        user = getattr(request, 'user', None)
+        if (not user or not user.is_authenticated) and hasattr(request, '_request') and hasattr(request._request, 'user'):
+            user = request._request.user
+
+        if user and user.is_authenticated:
             try:
-                if request.user.role == 'system_admin' or request.user.is_staff:
+                staff_profile = HospitalStaff.objects.filter(user=user).first()
+                if user.role == 'system_admin' or user.is_staff or user.is_superuser:
                     verify_pending_payments()
-                elif hasattr(request.user, 'hospital_staff'):
-                    verify_pending_payments(hospital=request.user.hospital_staff.hospital)
+                elif staff_profile and staff_profile.hospital:
+                    verify_pending_payments(hospital=staff_profile.hospital)
             except Exception:
                 pass
 
         hospital_id = request.query_params.get('hospital_id')
         from payments.models import Payment
         from payments.serializers import PaymentSerializer
-        queryset = Payment.objects.filter(payment_type='HOSPITAL_SUBSCRIPTION')
+
+        queryset = Payment.objects.filter(
+            payment_type='HOSPITAL_SUBSCRIPTION'
+        ).select_related('hospital', 'user').prefetch_related('invoices', 'receipts').order_by('-created_at')
 
         if hospital_id:
-            queryset = queryset.filter(hospital_id=hospital_id)
-        elif request.user.is_authenticated and hasattr(request.user, 'hospital_staff'):
-            queryset = queryset.filter(hospital=request.user.hospital_staff.hospital)
-        elif not (request.user.is_authenticated and (request.user.role == 'system_admin' or request.user.is_staff)):
+            try:
+                queryset = queryset.filter(hospital_id=hospital_id)
+            except (ValueError, TypeError):
+                return Response([], status=status.HTTP_200_OK)
+        elif user and user.is_authenticated:
+            staff_profile = HospitalStaff.objects.filter(user=user).first()
+            if staff_profile and staff_profile.hospital:
+                queryset = queryset.filter(hospital=staff_profile.hospital)
+            elif not (user.role == 'system_admin' or user.is_staff or user.is_superuser):
+                return Response([], status=status.HTTP_200_OK)
+        else:
             return Response([], status=status.HTTP_200_OK)
 
-        serializer = PaymentSerializer(queryset, many=True)
-        return Response(serializer.data)
+        serializer = PaymentSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def invoice_detail(self, request):

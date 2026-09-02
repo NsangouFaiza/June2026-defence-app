@@ -5,19 +5,38 @@ from rest_framework import viewsets
 
 from .models import Campaign, CampaignRegistration
 from .serializers import CampaignSerializer, CampaignRegistrationSerializer
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 
 class CampaignListCreateView(generics.ListCreateAPIView):
-    queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filterset_fields = ['status', 'campaign_type']
 
+    def get_queryset(self):
+        from .services import publish_scheduled_campaigns
+        try:
+            publish_scheduled_campaigns()
+        except Exception as e:
+            logger.error(f"Error publishing scheduled campaigns on list load: {e}")
+        return Campaign.objects.all()
+
 
 class CampaignDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        from .services import publish_scheduled_campaigns
+        try:
+            publish_scheduled_campaigns()
+        except Exception as e:
+            logger.error(f"Error publishing scheduled campaigns on detail load: {e}")
+        return super().get_object()
+
 
     def perform_update(self, serializer):
         old_instance = self.get_object()
@@ -230,47 +249,12 @@ class CampaignActionViewSet(viewsets.ViewSet):
         """Publish the campaign, making it visible to donors and notifying matching target group."""
         try:
             campaign = Campaign.objects.get(pk=pk)
-            campaign.status = 'PUBLISHED'
-            campaign.save()
-            
-            from donors.models import Donor
-            from notifications.models import Notification
-            from django.db.models import Q
-            
-            donors = Donor.objects.all()
-            if campaign.target_blood_group:
-                donors = donors.filter(user__blood_group__iexact=campaign.target_blood_group)
-            if campaign.target_location:
-                donors = donors.filter(Q(user__city__icontains=campaign.target_location) | Q(user__region__icontains=campaign.target_location))
-            if campaign.target_eligibility == 'eligible':
-                donors = donors.filter(is_eligible=True)
-            elif campaign.target_eligibility == 'ineligible':
-                donors = donors.filter(is_eligible=False)
-            
-            from datetime import date
-            if campaign.target_age_min:
-                max_dob = date(date.today().year - campaign.target_age_min, date.today().month, date.today().day)
-                donors = donors.filter(user__date_of_birth__lte=max_dob)
-            if campaign.target_age_max:
-                min_dob = date(date.today().year - campaign.target_age_max - 1, date.today().month, date.today().day)
-                donors = donors.filter(user__date_of_birth__gte=min_dob)
-                
-            for donor in donors:
-                Notification.objects.create(
-                    recipient=donor.user,
-                    notification_type='CAMPAIGN',
-                    title=f"New Blood Campaign: {campaign.title}",
-                    message=f"A new campaign '{campaign.title}' has been published. Read details and register RSVP!",
-                    data={'campaign_id': campaign.id, 'priority': campaign.priority}
-                )
-                
-            campaign.is_sent = True
-            campaign.recipient_count = donors.count()
-            campaign.save()
-            
+            from .services import publish_campaign_helper
+            publish_campaign_helper(campaign)
             return Response({'message': f'Campaign published and targeted to {campaign.recipient_count} donors.'})
         except Campaign.DoesNotExist:
             return Response({'error': 'Campaign not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
     @action(detail=True, methods=['post'])
     def unpublish(self, request, pk=None):

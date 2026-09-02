@@ -36,6 +36,9 @@ class RequestRepository {
     }
   }
 
+  Future<BloodRequestModel> createBloodRequest(Map<String, dynamic> data) => createRequest(data);
+
+
   Future<BloodRequestModel> createEmergencyRequest(Map<String, dynamic> data) async {
     try {
       final response = await _apiService.post('/requests/emergency/', data);

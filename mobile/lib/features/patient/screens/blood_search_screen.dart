@@ -7,8 +7,10 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/inventory_repository.dart';
 import '../../../../data/models/blood_inventory_model.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class BloodSearchScreen extends ConsumerStatefulWidget {
+
   const BloodSearchScreen({super.key});
 
   @override
@@ -51,9 +53,10 @@ class _BloodSearchScreenState extends ConsumerState<BloodSearchScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('search_blood')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('search_blood'),
       ),
+
       body: Column(
         children: [
           // Filters

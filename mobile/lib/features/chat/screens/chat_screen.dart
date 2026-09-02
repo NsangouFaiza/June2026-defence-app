@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/services/permission_service.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
+
 import '../../../../data/models/message_model.dart';
 import '../../../../data/services/api_service.dart';
 import '../widgets/voice_note_player_bubble.dart';
@@ -408,9 +410,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final myId = currentUserAsync.value?.id ?? 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_otherUserName != null && _otherUserName!.isNotEmpty ? _otherUserName! : 'Direct Chat'),
+      appBar: LifeLinkAppBar(
+        title: _otherUserName != null && _otherUserName!.isNotEmpty ? _otherUserName! : 'Direct Chat',
       ),
+
       body: _conversationId == null
           ? const Center(child: CircularProgressIndicator())
           : Column(

@@ -16,6 +16,20 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
     filterset_fields = ['patient', 'hospital', 'blood_group', 'status', 'urgency']
     search_fields = ['patient__user__first_name', 'patient__user__last_name', 'hospital__name']
 
+    def get_queryset(self):
+        from payments.models import verify_pending_payments
+        try:
+            if self.request.user and self.request.user.is_authenticated:
+                if self.request.user.role == 'system_admin' or self.request.user.is_superuser:
+                    verify_pending_payments()
+                elif hasattr(self.request.user, 'hospital_staff'):
+                    verify_pending_payments(hospital=self.request.user.hospital_staff.hospital)
+                else:
+                    verify_pending_payments(user=self.request.user)
+        except Exception:
+            pass
+        return super().get_queryset()
+
     def perform_create(self, serializer):
         from patients.models import Patient
         patient, _ = Patient.objects.get_or_create(user=self.request.user)

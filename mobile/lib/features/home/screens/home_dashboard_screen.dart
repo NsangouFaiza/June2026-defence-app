@@ -245,7 +245,7 @@ class HomeDashboardScreen extends ConsumerWidget {
           localization.translate('appointments'),
           Icons.calendar_today,
           AppTheme.warning,
-          () => Navigator.of(context).pushNamed('/appointments'),
+          () => Navigator.of(context).pushNamed('/manage-appointments'),
         ),
         _buildActionCard(
           context,

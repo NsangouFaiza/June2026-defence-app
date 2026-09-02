@@ -164,14 +164,14 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
               indicatorColor: AppTheme.primaryColor,
               labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
               unselectedLabelStyle: TextStyle(fontSize: 12.sp),
-              tabs: const [
+              tabs: [
                 Tab(
-                  icon: Icon(Icons.dashboard_rounded),
-                  text: 'Dashboard',
+                  icon: const Icon(Icons.dashboard_rounded),
+                  text: localization.translate('dashboard'),
                 ),
                 Tab(
-                  icon: Icon(Icons.receipt_long_rounded),
-                  text: 'Receipts',
+                  icon: const Icon(Icons.receipt_long_rounded),
+                  text: localization.translate('receipts'),
                 ),
               ],
             ),
@@ -182,15 +182,18 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
             FutureBuilder<HospitalModel?>(
               future: _hospitalFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !_isInitialized) {
+                if (snapshot.connectionState == ConnectionState.waiting && !_isInitialized && _hospital == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError && !_isInitialized) {
+                if (snapshot.hasError && !_isInitialized && _hospital == null) {
                   return Center(child: Text('Error loading hospital profile: ${snapshot.error}'));
                 }
 
-                if (!_isInitialized) {
-                  _hospital = snapshot.data ?? HospitalModel(
+                if (snapshot.hasData && snapshot.data != null) {
+                  _hospital = snapshot.data;
+                  _isInitialized = true;
+                } else if (!_isInitialized && _hospital == null) {
+                  _hospital = HospitalModel(
                     id: 1,
                     name: 'Central Hospital Yaoundé',
                     address: 'Avenue Kennedy, Yaoundé',
@@ -206,6 +209,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
 
                 final hospital = _hospital!;
 
+
                 final now = DateTime.now();
                 final difference = hospital.subscriptionEndDate != null ? hospital.subscriptionEndDate!.difference(now) : null;
                 final daysRemaining = difference != null ? difference.inDays : 0;
@@ -214,11 +218,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                 String countdownText = '';
                 if (difference != null) {
                   if (daysRemaining > 0) {
-                    countdownText = '$daysRemaining day${daysRemaining > 1 ? "s" : ""} remaining';
+                    countdownText = '$daysRemaining ${localization.translate(daysRemaining > 1 ? "days_remaining" : "day_remaining")}';
                   } else if (hoursRemaining > 0) {
-                    countdownText = '$hoursRemaining hour${hoursRemaining > 1 ? "s" : ""} remaining';
+                    countdownText = '$hoursRemaining ${localization.translate(hoursRemaining > 1 ? "hours_remaining" : "hour_remaining")}';
                   } else {
-                    countdownText = 'Expires today!';
+                    countdownText = localization.translate('expires_today');
                   }
                 }
 
@@ -415,20 +419,31 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                   ],
                                 ),
                                 const Divider(height: 24),
-                                Row(
+                                Wrap(
+                                  spacing: 16.w,
+                                  runSpacing: 8.h,
                                   children: [
-                                    Icon(Icons.phone_outlined, size: 16.w, color: Colors.grey),
-                                    SizedBox(width: 8.w),
-                                    Text(
-                                      hospital.phoneNumber ?? '',
-                                      style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.phone_outlined, size: 16.w, color: Colors.grey),
+                                        SizedBox(width: 8.w),
+                                        Text(
+                                          hospital.phoneNumber ?? '',
+                                          style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                                        ),
+                                      ],
                                     ),
-                                    const Spacer(),
-                                    Icon(Icons.email_outlined, size: 16.w, color: Colors.grey),
-                                    SizedBox(width: 8.w),
-                                    Text(
-                                      hospital.email ?? '',
-                                      style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.email_outlined, size: 16.w, color: Colors.grey),
+                                        SizedBox(width: 8.w),
+                                        Text(
+                                          hospital.email ?? '',
+                                          style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -436,7 +451,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                 Container(
                                   padding: EdgeInsets.all(12.w),
                                   decoration: BoxDecoration(
-                                    color: hospital.isSubscriptionActive
+                                    color: hospital.computedIsSubscriptionActive
                                         ? AppTheme.success.withOpacity(0.08)
                                         : AppTheme.error.withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(12.r),
@@ -446,10 +461,10 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                       Row(
                                         children: [
                                           Icon(
-                                            hospital.isSubscriptionActive
+                                            hospital.computedIsSubscriptionActive
                                                 ? Icons.verified_user
                                                 : Icons.gpp_maybe,
-                                            color: hospital.isSubscriptionActive
+                                            color: hospital.computedIsSubscriptionActive
                                                 ? AppTheme.success
                                                 : AppTheme.error,
                                             size: 22.w,
@@ -460,13 +475,13 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  hospital.isSubscriptionActive
-                                                      ? 'Subscription Active (25 FCFA/mo)'
-                                                      : 'Subscription Expired / Inactive',
+                                                  hospital.computedIsSubscriptionActive
+                                                      ? localization.translate('subscription_active_desc')
+                                                      : localization.translate('subscription_expired_inactive'),
                                                   style: TextStyle(
                                                     fontSize: 13.sp,
                                                     fontWeight: FontWeight.bold,
-                                                    color: hospital.isSubscriptionActive
+                                                    color: hospital.computedIsSubscriptionActive
                                                         ? AppTheme.success
                                                         : AppTheme.error,
                                                   ),
@@ -474,14 +489,14 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                                 if (hospital.subscriptionEndDate != null) ...[
                                                   SizedBox(height: 2.h),
                                                   Text(
-                                                    'Valid until: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
+                                                    '${localization.translate('valid_until')}: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
                                                     style: TextStyle(
                                                       fontSize: 11.sp,
                                                       color: AppTheme.onSurfaceVariant,
                                                     ),
                                                   ),
                                                 ],
-                                                if (hospital.isSubscriptionActive && hospital.subscriptionEndDate != null) ...[
+                                                if (hospital.computedIsSubscriptionActive && hospital.subscriptionEndDate != null) ...[
                                                   SizedBox(height: 2.h),
                                                   Row(
                                                     children: [
@@ -504,8 +519,11 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                         ],
                                       ),
                                       SizedBox(height: 12.h),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                      Wrap(
+                                        spacing: 8.w,
+                                        runSpacing: 8.h,
+                                        alignment: WrapAlignment.end,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           TextButton.icon(
                                             onPressed: () {
@@ -515,9 +533,8 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                               );
                                             },
                                             icon: const Icon(Icons.receipt_long_rounded, size: 14),
-                                            label: Text('Invoices', style: TextStyle(fontSize: 11.sp)),
+                                            label: Text(localization.translate('invoices'), style: TextStyle(fontSize: 11.sp)),
                                           ),
-                                          SizedBox(width: 8.w),
                                           ElevatedButton.icon(
                                             onPressed: () {
                                               Navigator.of(context).pushNamed(
@@ -539,7 +556,9 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                             ),
                                             icon: const Icon(Icons.autorenew_rounded, size: 14),
                                             label: Text(
-                                              'Renew Subscription',
+                                              hospital.computedIsSubscriptionActive
+                                                  ? 'Extend Subscription'
+                                                  : localization.translate('renew_subscription'),
                                               style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
                                             ),
                                           ),
@@ -548,6 +567,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                     ],
                                   ),
                                 ),
+
                                 SizedBox(height: 12.h),
 
                                 if (hospital.description != null && hospital.description!.isNotEmpty) ...[

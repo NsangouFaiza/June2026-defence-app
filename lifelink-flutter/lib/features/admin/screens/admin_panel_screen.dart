@@ -9,6 +9,7 @@ import '../../../../data/services/api_service.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../payment/screens/receipt_history_screen.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -23,60 +24,26 @@ class AdminPanelScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                user != null ? 'Welcome Back, ${user.fullName}' : 'Welcome Back',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: Colors.white70,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 20.h,
-                    fit: BoxFit.contain,
-                  ),
-                  SizedBox(width: 8.w),
-                  Flexible(
-                    child: Text(
-                      localization.translate('admin_panel'),
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        appBar: LifeLinkAppBar(
+          title: localization.translate('admin_panel'),
+          subtitle: user != null ? 'Welcome Back, ${user.fullName}' : null,
           actions: [
             IconButton(
-              icon: const Icon(Icons.person_outlined),
+              icon: const Icon(Icons.person_outlined, color: Colors.white),
               onPressed: () {
                 Navigator.of(context).pushNamed('/profile');
               },
             ),
           ],
           bottom: TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             tabs: [
               Tab(text: localization.translate('users')),
               Tab(text: localization.translate('hospitals')),
-              Tab(text: 'Finance'),
-              Tab(text: localization.translate('statistics')),
+              Tab(text: localization.translate('subscriptions')),
+              const Tab(text: 'Analytics'),
             ],
           ),
         ),
@@ -582,9 +549,9 @@ class AdminPanelScreen extends ConsumerWidget {
                           child: Container(
                             padding: EdgeInsets.all(14.w),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: Theme.of(context).dividerColor),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,14 +562,14 @@ class AdminPanelScreen extends ConsumerWidget {
                                     SizedBox(width: 6.w),
                                     Text(
                                       'Subscriptions',
-                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                                      style: TextStyle(fontSize: 11.sp, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                                     ),
                                   ],
                                 ),
                                 SizedBox(height: 6.h),
                                 Text(
                                   '${subRevenue.toStringAsFixed(0)} FCFA',
-                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: AppTheme.onSurface),
+                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface),
                                 ),
                               ],
                             ),
@@ -613,9 +580,9 @@ class AdminPanelScreen extends ConsumerWidget {
                           child: Container(
                             padding: EdgeInsets.all(14.w),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: Theme.of(context).dividerColor),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,14 +593,14 @@ class AdminPanelScreen extends ConsumerWidget {
                                     SizedBox(width: 6.w),
                                     Text(
                                       'Blood Request',
-                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                                      style: TextStyle(fontSize: 11.sp, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                                     ),
                                   ],
                                 ),
                                 SizedBox(height: 6.h),
                                 Text(
                                   '${reqRevenue.toStringAsFixed(0)} FCFA',
-                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: AppTheme.onSurface),
+                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface),
                                 ),
                               ],
                             ),

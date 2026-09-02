@@ -9,8 +9,10 @@ import '../../../data/repositories/request_repository.dart';
 import '../../../data/models/donor_model.dart';
 import '../../../data/repositories/donor_repository.dart';
 import 'donor_selection_dialog.dart';
+import '../../../widgets/lifelink_app_bar.dart';
 
 class BloodRequestsListScreen extends ConsumerStatefulWidget {
+
   const BloodRequestsListScreen({super.key});
 
   @override
@@ -474,14 +476,10 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
     final requestRepo = ref.watch(requestRepositoryProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(localization.translate('blood_request')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('blood_request'),
       ),
+
       body: userAsync.when(
         data: (user) {
           if (user == null) {
@@ -812,7 +810,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Name:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
-                        Text(request.donorName!, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+                        SizedBox(width: 8.w),
+                        Flexible(
+                          child: Text(
+                            request.donorName!,
+                            style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     if (request.donorPhone != null && request.donorPhone!.isNotEmpty) ...[
@@ -821,7 +827,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Phone:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
-                          Text(request.donorPhone!, style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface)),
+                          SizedBox(width: 8.w),
+                          Flexible(
+                            child: Text(
+                              request.donorPhone!,
+                              style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                              textAlign: TextAlign.end,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -831,7 +845,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Email:', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant)),
-                          Text(request.donorEmail!, style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface)),
+                          SizedBox(width: 8.w),
+                          Flexible(
+                            child: Text(
+                              request.donorEmail!,
+                              style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurface),
+                              textAlign: TextAlign.end,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -875,7 +897,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Hospital:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
-                        Text(request.appointmentDetails!['hospital_name'] ?? 'Hospital Clinic', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8.w),
+                        Flexible(
+                          child: Text(
+                            request.appointmentDetails!['hospital_name'] ?? 'Hospital Clinic',
+                            style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     if (request.appointmentDetails!['hospital_address'] != null && request.appointmentDetails!['hospital_address'].toString().isNotEmpty) ...[
@@ -884,7 +914,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Address:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
-                          Text(request.appointmentDetails!['hospital_address'], style: TextStyle(fontSize: 11.sp)),
+                          SizedBox(width: 8.w),
+                          Flexible(
+                            child: Text(
+                              request.appointmentDetails!['hospital_address'],
+                              style: TextStyle(fontSize: 11.sp),
+                              textAlign: TextAlign.end,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -893,7 +931,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Scheduled Date:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
-                        Text(request.appointmentDetails!['date'] ?? 'N/A', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8.w),
+                        Flexible(
+                          child: Text(
+                            request.appointmentDetails!['date'] ?? 'N/A',
+                            style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     SizedBox(height: 4.h),
@@ -901,7 +947,15 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Scheduled Time:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
-                        Text(request.appointmentDetails!['time'] ?? '09:00 AM', style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8.w),
+                        Flexible(
+                          child: Text(
+                            request.appointmentDetails!['time'] ?? '09:00 AM',
+                            style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     SizedBox(height: 4.h),
@@ -909,9 +963,14 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Appointment Status:', style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant)),
-                        Text(
-                          (request.appointmentDetails!['status'] ?? 'SCHEDULED').toString().toUpperCase(),
-                          style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                        SizedBox(width: 8.w),
+                        Flexible(
+                          child: Text(
+                            (request.appointmentDetails!['status'] ?? 'SCHEDULED').toString().toUpperCase(),
+                            style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -934,16 +993,18 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
           // Patient Pay Now
           if (showPayButton) ...[
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Payment: PENDING (25 FCFA)',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppTheme.warning,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Payment: PENDING (25 FCFA)',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppTheme.warning,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                SizedBox(width: 8.w),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pushNamed(

@@ -5,14 +5,34 @@ import '../models/donor_model.dart';
 class DonorRepository {
   final ApiService _apiService = ApiService();
 
-  Future<List<DonorModel>> getDonors() async {
+  Future<List<DonorModel>> getDonors({
+    String? bloodGroup,
+    String? eligibility,
+    String? region,
+    String? city,
+  }) async {
     try {
-      final response = await _apiService.get('/donors/');
+      final params = <String, dynamic>{};
+      if (bloodGroup != null && bloodGroup.isNotEmpty && bloodGroup.toLowerCase() != 'all') {
+        params['blood_group'] = bloodGroup;
+      }
+      if (eligibility != null && eligibility.isNotEmpty && eligibility.toLowerCase() != 'all') {
+        params['eligibility'] = eligibility;
+      }
+      if (region != null && region.isNotEmpty && region.toLowerCase() != 'all') {
+        params['region'] = region;
+      }
+      if (city != null && city.isNotEmpty && city.toLowerCase() != 'all') {
+        params['city'] = city;
+      }
+
+      final response = await _apiService.get('/donors/', queryParameters: params.isEmpty ? null : params);
       return (response.data as List).map((json) => DonorModel.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to load donors: $e');
     }
   }
+
 
   Future<DonorModel?> getCurrentDonorProfile() async {
     try {

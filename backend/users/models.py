@@ -59,6 +59,14 @@ class User(AbstractUser):
     email_notifications = models.BooleanField(default=True)
     language = models.CharField(max_length=2, default='en')
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    
+    # Security Settings
+    two_factor_enabled = models.BooleanField(default=False)
+    biometric_enabled = models.BooleanField(default=False)
+    login_notifications_enabled = models.BooleanField(default=True)
+    recovery_email = models.EmailField(blank=True, null=True)
+    security_question = models.CharField(max_length=255, blank=True, null=True)
+    security_answer = models.CharField(max_length=255, blank=True, null=True)
 
     # Verification
     is_verified = models.BooleanField(default=False)
@@ -97,4 +105,28 @@ def create_user_profile(sender, instance, created, **kwargs):
         elif instance.role == 'patient':
             from patients.models import Patient
             Patient.objects.get_or_create(user=instance)
+
+
+class UserSession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+    device_name = models.CharField(max_length=255)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    last_activity = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_trusted = models.BooleanField(default=False)
+    refresh_token_id = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.device_name} ({self.ip_address})"
+
+
+class LoginHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_history')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_name = models.CharField(max_length=255)
+    login_time = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50, default='Success')
+
+    def __str__(self):
+        return f"{self.user.email} - {self.login_time} ({self.status})"
 

@@ -25,14 +25,44 @@ class AuthRepository {
       await prefs.setBool('has_seen_onboarding', true);
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      if (responseData is Map && responseData.containsKey('detail')) {
-        throw Exception(responseData['detail']);
+      if (responseData is Map) {
+        if (responseData.containsKey('detail')) {
+          final detailVal = responseData['detail'];
+          if (detailVal is String) {
+            throw Exception(detailVal);
+          } else if (detailVal is List) {
+            throw Exception(detailVal.join('\n'));
+          } else {
+            throw Exception(detailVal.toString());
+          }
+        }
+        final errors = <String>[];
+        responseData.forEach((key, value) {
+          if (value is List) {
+            errors.add(value.join(', '));
+          } else {
+            errors.add('$value');
+          }
+        });
+        if (errors.isNotEmpty) {
+          throw Exception(errors.join('\n'));
+        }
       }
-      throw Exception(e.message ?? 'Unknown login error');
+      if (e.response?.statusCode == 401) {
+        throw Exception('Invalid email or password. Please verify your credentials.');
+      } else if (e.response?.statusCode == 400) {
+        throw Exception('Invalid input provided. Please enter a valid email and password.');
+      } else if (e.response?.statusCode == 403) {
+        throw Exception('Account access restricted or subscription expired.');
+      } else if (e.response?.statusCode == 500) {
+        throw Exception('Server error. Please try again later.');
+      }
+      throw Exception(e.message ?? 'Authentication failed');
     } catch (e) {
-      throw Exception('Login failed: ${e.toString()}');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
 
   Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
     try {
@@ -116,14 +146,71 @@ class AuthRepository {
     }
   }
 
-  Future<void> changePassword(String oldPassword, String newPassword) async {
+  Future<void> changePassword(String currentPassword, String newPassword) async {
     try {
-      await _apiService.post('/users/change-password/', {
-        'old_password': oldPassword,
+      final response = await _apiService.post('/users/change-password/', {
+        'current_password': currentPassword,
+        'old_password': currentPassword,
         'new_password': newPassword,
       });
+
+      if (response.data is Map && response.data.containsKey('access')) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', response.data['access']);
+        if (response.data.containsKey('refresh')) {
+          await prefs.setString('refresh_token', response.data['refresh']);
+        }
+      }
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      if (responseData is Map) {
+        if (responseData.containsKey('detail')) {
+          throw Exception(responseData['detail']);
+        }
+        final errors = <String>[];
+        responseData.forEach((key, value) {
+          if (value is List) {
+            errors.add(value.join(', '));
+          } else {
+            errors.add('$value');
+          }
+        });
+        if (errors.isNotEmpty) {
+          throw Exception(errors.join('\n'));
+        }
+      }
+      throw Exception('Failed to change password. Please verify your current password.');
     } catch (e) {
-      throw Exception('Failed to change password: ${e.toString()}');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<Map<String, dynamic>> getSecuritySettings() async {
+    try {
+      final response = await _apiService.get('/users/security-settings/');
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to load security settings: ${e.toString()}');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateSecuritySettings(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiService.post('/users/security-settings/update/', data);
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to update security settings: ${e.toString()}');
+    }
+  }
+
+  Future<void> terminateSession({int? sessionId, bool terminateAllOthers = false}) async {
+    try {
+      await _apiService.post('/users/security-settings/terminate-session/', {
+        if (sessionId != null) 'session_id': sessionId,
+        'terminate_all_others': terminateAllOthers,
+      });
+    } catch (e) {
+      throw Exception('Failed to terminate session: ${e.toString()}');
     }
   }
 

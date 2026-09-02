@@ -5,8 +5,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/models/conversation_model.dart';
 import '../../../../data/models/contact_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
+
   const ChatListScreen({super.key});
 
   @override
@@ -166,12 +168,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('Direct Chat'),
-        elevation: 0,
+      appBar: LifeLinkAppBar(
+        title: 'Direct Chat / Messages',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               setState(() {
                 _isLoadingConversations = true;
@@ -184,6 +185,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen>
           ),
         ],
         bottom: TabBar(
+
           controller: _tabController,
           isScrollable: true,
           labelColor: Colors.white,

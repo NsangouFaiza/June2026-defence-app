@@ -7,8 +7,10 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/models/donor_model.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class DonorDetailsScreen extends ConsumerStatefulWidget {
+
   final int donorId;
 
   const DonorDetailsScreen({super.key, required this.donorId});
@@ -220,7 +222,7 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
 
     if (_donor == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(localization.translate('donor_details'))),
+        appBar: LifeLinkAppBar(title: localization.translate('donor_details')),
         body: const Center(child: Text('Donor details not found.')),
       );
     }
@@ -229,16 +231,17 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
     final isSystemic = _hasSystemicConstraint(donor);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(localization.translate('donor_details')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('donor_details'),
+        subtitle: donor.fullName,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadDonor,
           ),
         ],
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),

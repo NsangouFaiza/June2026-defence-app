@@ -7,6 +7,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/inventory_repository.dart';
 import '../../../../data/models/blood_inventory_model.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class BloodInventoryScreen extends ConsumerStatefulWidget {
   const BloodInventoryScreen({super.key});
@@ -292,9 +293,10 @@ class _BloodInventoryScreenState extends ConsumerState<BloodInventoryScreen> {
     final inventoryRepo = ref.watch(inventoryRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('blood_inventory')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('blood_inventory'),
         actions: [
+
           FutureBuilder<List<BloodInventoryModel>>(
             future: inventoryRepo.getInventory(),
             builder: (context, snapshot) {

@@ -7,8 +7,10 @@ import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/inventory_repository.dart';
 import '../../../../data/models/blood_inventory_model.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class AvailableBloodPacksScreen extends ConsumerStatefulWidget {
+
   const AvailableBloodPacksScreen({super.key});
 
   @override
@@ -125,10 +127,10 @@ class _AvailableBloodPacksScreenState extends ConsumerState<AvailableBloodPacksS
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        title: const Text('Available Blood Packs'),
-        elevation: 0,
+      appBar: const LifeLinkAppBar(
+        title: 'Available Blood Packs / Poches de sang',
       ),
+
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

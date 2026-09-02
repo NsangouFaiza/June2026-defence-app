@@ -8,6 +8,7 @@ import '../../../../data/repositories/request_repository.dart';
 import '../../../../data/repositories/hospital_repository.dart';
 import '../../../../data/models/hospital_model.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class BloodRequestScreen extends ConsumerStatefulWidget {
   const BloodRequestScreen({super.key});
@@ -20,12 +21,23 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedBloodGroup;
   int _quantity = 1;
-  String? _selectedUrgency;
+  String _urgencyLevel = 'NORMAL';
+  String _fulfillmentType = 'DONOR_DISPATCH';
   String? _selectedHospitalId;
+  String? _selectedHospitalName;
   String? _reason;
   bool _isEmergency = false;
-  bool _isLoading = false;
+  String get _selectedUrgency => _urgencyLevel;
+  set _selectedUrgency(String value) => _urgencyLevel = value;
+  final _patientNameController = TextEditingController();
+  final _hospitalController = TextEditingController();
+  final _contactPhoneController = TextEditingController();
+  final _notesController = TextEditingController();
+
+
   List<HospitalModel> _hospitals = [];
+  bool _isLoadingHospitals = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -34,32 +46,38 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (args != null) {
-      if (args['bloodGroup'] != null && _selectedBloodGroup == null) {
-        _selectedBloodGroup = args['bloodGroup'] as String;
-      }
-      if (args['hospitalId'] != null && _selectedHospitalId == null) {
-        _selectedHospitalId = args['hospitalId'].toString();
-      }
-    }
+  void dispose() {
+    _patientNameController.dispose();
+    _hospitalController.dispose();
+    _contactPhoneController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadHospitals() async {
     try {
-      final hospitalRepo = ref.read(hospitalRepositoryProvider);
-      final hospitals = await hospitalRepo.getHospitals();
-      setState(() => _hospitals = hospitals);
-    } catch (_) {}
+      final repo = ref.read(hospitalRepositoryProvider);
+      final list = await repo.getHospitals();
+      if (mounted) {
+        setState(() {
+          _hospitals = list;
+          _isLoadingHospitals = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingHospitals = false);
+      }
+    }
   }
 
   Future<void> _submitRequest() async {
+    final localization = ref.read(localizationServiceProvider);
+
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedBloodGroup == null || _selectedUrgency == null || _selectedHospitalId == null) {
+    if (_selectedBloodGroup == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select all required fields')),
+        SnackBar(content: Text(localization.translate('select_blood_group_error') ?? 'Please select a blood group')),
       );
       return;
     }
@@ -67,20 +85,25 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final requestRepo = ref.read(requestRepositoryProvider);
-      await requestRepo.createRequest({
+      final repo = ref.read(requestRepositoryProvider);
+      final requestData = {
         'blood_group': _selectedBloodGroup,
         'quantity': _quantity,
-        'urgency': _selectedUrgency,
-        'hospital_id': int.parse(_selectedHospitalId!),
-        'is_emergency': _isEmergency,
-        'reason': _reason ?? '',
-      });
+        'urgency_level': _urgencyLevel,
+        'fulfillment_type': _fulfillmentType,
+        'patient_name': _patientNameController.text.trim(),
+        'contact_phone': _contactPhoneController.text.trim(),
+        'notes': _notesController.text.trim(),
+        if (_selectedHospitalId != null) 'hospital_id': int.parse(_selectedHospitalId!),
+        if (_selectedHospitalName != null) 'hospital_name': _selectedHospitalName,
+      };
+
+      await repo.createBloodRequest(requestData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Blood request submitted successfully'),
+          SnackBar(
+            content: Text(localization.translate('request_submitted_success') ?? 'Blood request created successfully!'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -90,7 +113,7 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error creating request: $e'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -107,24 +130,8 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(localization.translate('request_blood')),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: AppTheme.onSurface,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryColor.withOpacity(0.03),
-                AppTheme.secondaryColor.withOpacity(0.01),
-              ],
-            ),
-          ),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('request_blood'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

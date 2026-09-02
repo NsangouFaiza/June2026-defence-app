@@ -7,6 +7,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/report_repository.dart';
 import '../../../../data/models/donor_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -14,6 +15,7 @@ class ReportsScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
+
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   String _selectedReportType = 'SUMMARY';
@@ -102,20 +104,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(localization.translate('reports')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('reports'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadReportData,
           ),
         ],
       ),
+
       body: SafeArea(
         child: Column(
           children: [
@@ -627,7 +625,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             SizedBox(height: 2.h),
             Text(
               label,
-              style: TextStyle(fontSize: 10.sp, color: AppTheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 10.sp, color: Theme.of(context).colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],

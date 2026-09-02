@@ -8,6 +8,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/providers.dart';
 import '../../../data/repositories/donor_repository.dart';
 import '../../../data/models/donor_model.dart';
+import '../../../widgets/lifelink_app_bar.dart';
+
 import '../../../data/services/api_service.dart';
 
 class DigitalDonorBadgeScreen extends ConsumerWidget {
@@ -21,16 +23,10 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: const Text('Verified Donor Badge Credential'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const LifeLinkAppBar(
+        title: 'Verified Donor Badge Credential',
       ),
+
       body: FutureBuilder<DonorModel?>(
         future: donorRepo.getCurrentDonorProfile(),
         builder: (context, snapshot) {
@@ -768,12 +764,17 @@ class DigitalDonorBadgeScreen extends ConsumerWidget {
               color: Colors.grey.shade500,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF374151),
+          SizedBox(width: 8.w),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF374151),
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

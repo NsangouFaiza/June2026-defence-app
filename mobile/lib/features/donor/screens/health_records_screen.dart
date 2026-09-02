@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/providers.dart';
 import '../../../data/models/health_record_model.dart';
 import '../../../data/models/donor_model.dart';
+import '../../../widgets/lifelink_app_bar.dart';
 
 class HealthRecordsScreen extends ConsumerStatefulWidget {
   const HealthRecordsScreen({super.key});
@@ -14,22 +15,14 @@ class HealthRecordsScreen extends ConsumerStatefulWidget {
 }
 
 class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
-  bool _isLoading = false;
-
   @override
   Widget build(BuildContext context) {
     final healthRepo = ref.watch(healthRecordRepositoryProvider);
     final donorRepo = ref.watch(donorRepositoryProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('My Health Records'),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const LifeLinkAppBar(
+        title: 'My Health Records / Mes Dossiers de Santé',
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: () async {
@@ -143,7 +136,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurface,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(height: 12.h),
@@ -202,7 +195,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurface,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(height: 12.h),
@@ -210,7 +203,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                 Container(
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(16.r),
                     border: Border.all(color: Colors.grey.withOpacity(0.15)),
                   ),
@@ -235,7 +228,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                       style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.onSurface,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -247,17 +240,17 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(24.w),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16.r),
                     ),
                     child: Column(
                       children: [
                         Icon(Icons.health_and_safety_outlined, size: 48.w, color: Colors.grey),
                         SizedBox(height: 8.h),
-                        const Text(
+                        Text(
                           'No detailed historical health logs recorded yet. Vitals recorded during your donation visits will appear here.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: AppTheme.onSurfaceVariant),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -273,7 +266,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
                         margin: EdgeInsets.only(bottom: 12.h),
                         padding: EdgeInsets.all(16.w),
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(color: Colors.grey.withOpacity(0.15)),
                         ),
@@ -381,7 +374,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.withOpacity(0.15)),
         boxShadow: [
@@ -418,12 +411,12 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
             children: [
               Text(
                 value,
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
               ),
               SizedBox(height: 2.h),
               Text(
                 title,
-                style: TextStyle(fontSize: 11.sp, color: AppTheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 11.sp, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -439,7 +432,7 @@ class _HealthRecordsScreenState extends ConsumerState<HealthRecordsScreen> {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500, color: AppTheme.onSurface),
+            style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
         Row(

@@ -35,6 +35,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             except HospitalStaff.DoesNotExist:
                 pass
 
+        profile_pic = None
+        if hasattr(self.user, 'profile_picture') and self.user.profile_picture:
+            try:
+                profile_pic = self.user.profile_picture.url
+            except Exception:
+                profile_pic = None
+
         data['user'] = {
             'id': self.user.id,
             'email': self.user.email,
@@ -42,9 +49,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'role': self.user.role,
             'blood_group': self.user.blood_group,
             'language': self.user.language,
-            'profile_picture': self.user.profile_picture.url if self.user.profile_picture else None,
+            'profile_picture': profile_pic,
         }
         return data
+
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -110,5 +118,83 @@ class ForgotPasswordSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     """Serializer for changing password."""
 
-    old_password = serializers.CharField(write_only=True)
+    current_password = serializers.CharField(write_only=True, required=False)
+    old_password = serializers.CharField(write_only=True, required=False)
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        cur_pass = attrs.get('current_password') or attrs.get('old_password')
+        if not cur_pass:
+            raise serializers.ValidationError({'current_password': 'Current password is required.'})
+        
+        new_pass = attrs.get('new_password')
+        if new_pass:
+            import re
+            if len(new_pass) < 8:
+                raise serializers.ValidationError({'new_password': 'Password must be at least 8 characters long.'})
+            if not re.search(r'[A-Z]', new_pass):
+                raise serializers.ValidationError({'new_password': 'Password must contain at least one uppercase letter.'})
+            if not re.search(r'[a-z]', new_pass):
+                raise serializers.ValidationError({'new_password': 'Password must contain at least one lowercase letter.'})
+            if not re.search(r'[0-9]', new_pass):
+                raise serializers.ValidationError({'new_password': 'Password must contain at least one number.'})
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pass):
+                raise serializers.ValidationError({'new_password': 'Password must contain at least one special character.'})
+        
+        attrs['current_password_resolved'] = cur_pass
+        return attrs
+
+
+from .models import UserSession, LoginHistory
+
+class UserSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSession
+        fields = ['id', 'device_name', 'ip_address', 'last_activity', 'created_at', 'is_trusted']
+
+
+class LoginHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoginHistory
+        fields = ['id', 'ip_address', 'device_name', 'login_time', 'status']
+
+
+class SecuritySettingsSerializer(serializers.ModelSerializer):
+    active_sessions = UserSessionSerializer(many=True, source='sessions', read_only=True)
+    login_history = serializers.SerializerMethodField()
+    security_score = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'two_factor_enabled',
+            'biometric_enabled',
+            'login_notifications_enabled',
+            'recovery_email',
+            'security_question',
+            'security_answer',
+            'active_sessions',
+            'login_history',
+            'security_score',
+        ]
+        read_only_fields = ['active_sessions', 'login_history', 'security_score']
+        extra_kwargs = {
+            'security_answer': {'write_only': True}
+        }
+
+    def get_login_history(self, obj):
+        # Return recent 10 login history logs
+        logs = obj.login_history.all().order_by('-login_time')[:10]
+        return LoginHistorySerializer(logs, many=True).data
+
+    def get_security_score(self, obj):
+        score = 30  # Base score
+        if obj.two_factor_enabled:
+            score += 30
+        if obj.biometric_enabled:
+            score += 15
+        if obj.recovery_email:
+            score += 15
+        if obj.security_question and obj.security_answer:
+            score += 10
+        return score

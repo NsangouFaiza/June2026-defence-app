@@ -5,10 +5,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/payment_repository.dart';
 import '../../../../core/providers/providers.dart';
-
-final paymentRepositoryProvider = Provider((ref) => PaymentRepository());
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class HospitalSubscriptionPaymentScreen extends ConsumerStatefulWidget {
+
   final int? hospitalId;
   final String? hospitalName;
   final String? currentExpiryDate;
@@ -259,9 +259,16 @@ class _HospitalSubscriptionPaymentScreenState
               SizedBox(height: 8.h),
               _buildReceiptRow(
                 'Valid Until',
-                payment['subscription_period_end'] != null
-                    ? payment['subscription_period_end'].toString().substring(0, 10)
-                    : 'Active',
+                () {
+                  if (payment['subscription_period_end'] != null) {
+                    final raw = payment['subscription_period_end'].toString();
+                    if (raw.length >= 10) return raw.substring(0, 10);
+                  }
+                  final months = payment['months'] is int ? payment['months'] as int : _selectedMonths;
+                  final now = DateTime.now();
+                  final calcEnd = DateTime(now.year, now.month + months, now.day);
+                  return calcEnd.toString().substring(0, 10);
+                }(),
                 color: AppTheme.primaryColor,
                 isBold: true,
               ),
@@ -315,11 +322,10 @@ class _HospitalSubscriptionPaymentScreenState
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hospital Subscription / Abonnement Hôpital'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+      appBar: const LifeLinkAppBar(
+        title: 'Hospital Subscription / Abonnement Hôpital',
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(20.w),
@@ -593,7 +599,7 @@ class _HospitalSubscriptionPaymentScreenState
       ),
       selected: isSelected,
       selectedColor: AppTheme.primaryColor,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       onSelected: (selected) {
         if (selected) {
@@ -617,9 +623,9 @@ class _HospitalSubscriptionPaymentScreenState
       child: Container(
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.08) : Colors.white,
+          color: isSelected ? color.withOpacity(0.08) : Theme.of(context).cardColor,
           border: Border.all(
-            color: isSelected ? color : Colors.grey[300]!,
+            color: isSelected ? color : Theme.of(context).dividerColor,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12.r),

@@ -8,6 +8,7 @@ import '../../../../data/repositories/appointment_repository.dart';
 import '../../../../data/repositories/hospital_repository.dart';
 import '../../../../data/models/hospital_model.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class AppointmentBookingScreen extends ConsumerStatefulWidget {
   const AppointmentBookingScreen({super.key});
@@ -120,9 +121,10 @@ class _AppointmentBookingScreenState extends ConsumerState<AppointmentBookingScr
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('book_appointment')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('book_appointment'),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),

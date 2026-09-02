@@ -9,8 +9,10 @@ import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/repositories/notification_repository.dart';
 import '../../../../data/models/appointment_model.dart';
 import '../../../../data/models/donor_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class ManageAppointmentsScreen extends ConsumerStatefulWidget {
+
   const ManageAppointmentsScreen({super.key});
 
   @override
@@ -296,16 +298,20 @@ class _ManageAppointmentsScreenState extends ConsumerState<ManageAppointmentsScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Appointments & Alerts'),
+      appBar: LifeLinkAppBar(
+        title: 'Manage Appointments & Alerts',
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.event), text: 'Appointments'),
             Tab(icon: Icon(Icons.notifications_active), text: 'Send Alerts'),
           ],
         ),
       ),
+
       body: TabBarView(
         controller: _tabController,
         children: [

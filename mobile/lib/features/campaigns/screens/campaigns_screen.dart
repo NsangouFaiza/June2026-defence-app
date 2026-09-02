@@ -23,9 +23,25 @@ class CampaignsScreen extends ConsumerStatefulWidget {
 class _CampaignsScreenState extends ConsumerState<CampaignsScreen> {
   final Set<int> _registeringIds = {};
   bool _isActionLoading = false;
+  Future<List<CampaignModel>>? _campaignsFuture;
+  Future<List<CampaignModel>>? _myCampaignsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCampaigns();
+  }
+
+  void _loadCampaigns() {
+    final repo = ref.read(campaignRepositoryProvider);
+    _campaignsFuture = repo.getCampaigns();
+    _myCampaignsFuture = repo.getMyCampaigns();
+  }
 
   void _refresh() {
-    setState(() {});
+    setState(() {
+      _loadCampaigns();
+    });
   }
 
   Future<void> _duplicateCampaign(int id) async {
@@ -243,7 +259,7 @@ class _CampaignsScreenState extends ConsumerState<CampaignsScreen> {
     required bool isStaff,
   }) {
     return FutureBuilder<List<CampaignModel>>(
-      future: mode == 'my' ? campaignRepo.getMyCampaigns() : campaignRepo.getCampaigns(),
+      future: mode == 'my' ? _myCampaignsFuture : _campaignsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

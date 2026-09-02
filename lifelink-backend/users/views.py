@@ -22,10 +22,55 @@ from .serializers import (
 User = get_user_model()
 
 
+from .models import UserSession, LoginHistory
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom token view using our serializer."""
     permission_classes = [permissions.AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            try:
+                email = request.data.get('email', '').strip()
+                user = User.objects.filter(email__iexact=email).first()
+                if user:
+                    ip_address = request.META.get('REMOTE_ADDR')
+                    user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown Device')
+                    
+                    device_name = 'Web Browser'
+                    if 'Mobi' in user_agent:
+                        device_name = 'Mobile App'
+                    elif 'Postman' in user_agent or 'curl' in user_agent:
+                        device_name = 'API Client'
+                    
+                    refresh_token = response.data.get('refresh')
+                    refresh_token_id = ''
+                    if refresh_token:
+                        try:
+                            token_obj = RefreshToken(refresh_token)
+                            refresh_token_id = token_obj.payload.get('jti', '')
+                        except Exception:
+                            pass
+                    
+                    LoginHistory.objects.create(
+                        user=user,
+                        ip_address=ip_address,
+                        device_name=device_name,
+                        status='Success'
+                    )
+                    
+                    UserSession.objects.create(
+                        user=user,
+                        device_name=device_name,
+                        ip_address=ip_address,
+                        refresh_token_id=refresh_token_id
+                    )
+            except Exception as e:
+                print("Failed to record login details:", e)
+        return response
+
 
 
 @api_view(['POST'])
@@ -190,14 +235,23 @@ def change_password(request):
     serializer = ChangePasswordSerializer(data=request.data)
     if serializer.is_valid():
         user = request.user
-        if not user.check_password(serializer.validated_data['old_password']):
+        cur_pass = serializer.validated_data.get('current_password_resolved') or serializer.validated_data.get('current_password') or serializer.validated_data.get('old_password')
+        if not user.check_password(cur_pass):
             return Response(
-                {'old_password': 'Wrong password.'},
+                {'detail': 'Incorrect current password.', 'code': 'INVALID_CURRENT_PASSWORD'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        user.set_password(serializer.validated_data['new_password'])
+        new_pass = serializer.validated_data['new_password']
+        user.set_password(new_pass)
         user.save()
-        return Response({'message': 'Password changed successfully.'})
+
+        # Issue fresh JWT tokens after password change
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'message': 'Password changed successfully.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        }, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -385,4 +439,51 @@ def list_staff_contacts(request):
             'position': position,
         })
     return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_security_settings(request):
+    """Retrieve security settings, active sessions, and login history for current user."""
+    from .serializers import SecuritySettingsSerializer
+    serializer = SecuritySettingsSerializer(request.user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def update_security_settings(request):
+    """Update user security preferences (2FA, biometrics, notifications, recovery email)."""
+    from .serializers import SecuritySettingsSerializer
+    user = request.user
+    serializer = SecuritySettingsSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def terminate_session(request):
+    """Terminate an active session or all other active sessions."""
+    from .models import UserSession
+    user = request.user
+    session_id = request.data.get('session_id')
+    terminate_all_others = request.data.get('terminate_all_others', False)
+
+    if terminate_all_others:
+        # Keep current session if possible, or delete all sessions for user
+        UserSession.objects.filter(user=user).delete()
+        return Response({'message': 'All other active sessions terminated successfully.'}, status=status.HTTP_200_OK)
+
+    if session_id:
+        session = UserSession.objects.filter(user=user, id=session_id).first()
+        if session:
+            session.delete()
+            return Response({'message': f'Session {session_id} terminated.'}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({'detail': 'session_id or terminate_all_others parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
 

@@ -6,8 +6,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/providers.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/api_service.dart';
+import '../../../widgets/lifelink_app_bar.dart';
+
 
 // Provider for fetching payment/receipt history
+
 final receiptHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final response = await ApiService().get('/payments/history/');
   return (response.data as List).cast<Map<String, dynamic>>();
@@ -95,18 +98,10 @@ class ReceiptHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: const Text('Payment History'),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
+      appBar: const LifeLinkAppBar(
+        title: 'Payment History / Historique des reçus',
       ),
+
       body: content,
     );
   }
@@ -140,7 +135,7 @@ class ReceiptHistoryScreen extends ConsumerWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       elevation: 0,
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       child: InkWell(
         onTap: () => _showReceiptDetailsSheet(context, receipt),
         borderRadius: BorderRadius.circular(16.r),
@@ -248,7 +243,7 @@ class ReceiptHistoryScreen extends ConsumerWidget {
       builder: (context) {
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(24.r),
               topRight: Radius.circular(24.r),

@@ -17,7 +17,7 @@ class DonorDashboardScreen extends ConsumerWidget {
     final user = userAsync.value;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: FutureBuilder<DonorModel?>(
         future: donorRepo.getCurrentDonorProfile(),
         builder: (context, snapshot) {

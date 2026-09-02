@@ -195,7 +195,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final localization = ref.watch(localizationServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -304,7 +303,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         localization.translate('create_account'),
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.onSurface,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -312,7 +311,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Text(
                         localization.translate('select_role_subtitle'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.onSurfaceVariant,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -722,6 +721,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 
                 TextFormField(
                   controller: _passwordController,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  keyboardType: TextInputType.visiblePassword,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: localization.translate('password'),
                     prefixIcon: const Icon(Icons.lock_outlined),
@@ -735,7 +738,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       },
                     ),
                   ),
-                  obscureText: _obscurePassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return localization.translate('please_enter_password');
@@ -749,6 +751,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 SizedBox(height: 12.h),
                 TextFormField(
                   controller: _confirmPasswordController,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  keyboardType: TextInputType.visiblePassword,
+                  obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: localization.translate('confirm_password'),
                     prefixIcon: const Icon(Icons.lock_outlined),
@@ -762,7 +768,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       },
                     ),
                   ),
-                  obscureText: _obscureConfirmPassword,
                   validator: (value) {
                     if (value != _passwordController.text) {
                       return localization.translate('passwords_do_not_match');
@@ -788,8 +793,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       : Text(localization.translate('register')),
                 ),
                 SizedBox(height: 16.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       localization.translate('already_have_account'),

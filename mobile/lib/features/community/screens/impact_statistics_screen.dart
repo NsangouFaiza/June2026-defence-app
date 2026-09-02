@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/community_repository.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class ImpactStatisticsScreen extends ConsumerWidget {
   const ImpactStatisticsScreen({super.key});
@@ -16,13 +17,10 @@ class ImpactStatisticsScreen extends ConsumerWidget {
     final communityRepo = ref.watch(communityRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('impact_statistics')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('impact_statistics'),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),

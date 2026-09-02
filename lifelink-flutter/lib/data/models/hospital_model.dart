@@ -46,12 +46,23 @@ class HospitalModel {
     this.distanceKm,
   });
 
+  bool get computedIsSubscriptionActive {
+    if (isSubscriptionActive) return true;
+    if (subscriptionStatus?.toUpperCase() == 'ACTIVE' &&
+        subscriptionEndDate != null &&
+        subscriptionEndDate!.isAfter(DateTime.now())) {
+      return true;
+    }
+    return false;
+  }
+
   List<String> get servicesList {
     if (services == null || services!.trim().isEmpty) {
       return ['Blood Bank', 'Emergency Care', 'Transfusion'];
     }
     return services!.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
+
 
   String get formattedDistance {
     if (distanceKm == null) return 'Distance unknown';

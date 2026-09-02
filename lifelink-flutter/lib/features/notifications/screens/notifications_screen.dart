@@ -6,6 +6,7 @@ import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../data/repositories/notification_repository.dart';
 import '../../../../data/models/notification_model.dart';
+import '../../../../widgets/lifelink_app_bar.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -16,17 +17,18 @@ class NotificationsScreen extends ConsumerWidget {
     final notificationRepo = ref.watch(notificationRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.translate('notifications')),
+      appBar: LifeLinkAppBar(
+        title: localization.translate('notifications'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.done_all_outlined),
+            icon: const Icon(Icons.done_all_outlined, color: Colors.white),
             onPressed: () {
               // Mark all as read
             },
           ),
         ],
       ),
+
       body: FutureBuilder<List<NotificationModel>>(
         future: notificationRepo.getNotifications(),
         builder: (context, snapshot) {

@@ -52,10 +52,41 @@ class DonorModel {
     return '$server$path';
   }
 
+  String get formattedLocation {
+    final hasRegion = region != null && region!.trim().isNotEmpty && region != 'null';
+    final hasCity = city != null && city!.trim().isNotEmpty && city != 'null';
+
+    if (hasRegion && hasCity) {
+      return '$region, $city';
+    } else if (hasCity) {
+      return city!;
+    } else if (hasRegion) {
+      return region!;
+    } else if (address != null && address!.trim().isNotEmpty && address != 'null') {
+      return address!;
+    }
+    return 'Location not provided';
+  }
+
+  String get formattedPhone {
+    if (phoneNumber.trim().isEmpty || phoneNumber == 'null') {
+      return 'Phone not provided';
+    }
+    return phoneNumber;
+  }
+
+  String get formattedEmail {
+    if (email.trim().isEmpty || email == 'null') {
+      return 'Email not provided';
+    }
+    return email;
+  }
+
   int get age {
     if (dateOfBirth == null) return 25; // Default fallback age
     return DateTime.now().year - dateOfBirth!.year;
   }
+
 
   DonorModel({
     required this.id,
