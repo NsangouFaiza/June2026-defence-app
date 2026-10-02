@@ -1,3 +1,4 @@
+import '../widgets/check_blood_availability_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
@@ -21,8 +22,8 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedBloodGroup;
   int _quantity = 1;
-  String _urgencyLevel = 'NORMAL';
-  String _fulfillmentType = 'DONOR_DISPATCH';
+  String _urgencyLevel = 'MEDIUM';
+  String _fulfillmentType = 'DIRECT_DONATION';
   String? _selectedHospitalId;
   String? _selectedHospitalName;
   String? _reason;
@@ -39,10 +40,39 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   bool _isLoadingHospitals = true;
   bool _isLoading = false;
 
+  bool _argsLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _loadHospitals();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        if (args['hospital_id'] != null) {
+          _selectedHospitalId = args['hospital_id'].toString();
+        }
+        if (args['hospital_name'] != null) {
+          _selectedHospitalName = args['hospital_name'].toString();
+          _hospitalController.text = _selectedHospitalName!;
+        }
+        if (args['blood_group'] != null) {
+          _selectedBloodGroup = args['blood_group'].toString();
+        }
+        if (args['quantity'] != null) {
+          _quantity = args['quantity'] as int;
+        }
+        if (args['fulfillment_type'] != null) {
+          _fulfillmentType = args['fulfillment_type'].toString();
+        }
+      }
+    }
   }
 
   @override
@@ -86,14 +116,16 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
 
     try {
       final repo = ref.read(requestRepositoryProvider);
-      final requestData = {
+      final mappedUrgency = (_urgencyLevel == 'NORMAL') ? 'MEDIUM' : _urgencyLevel;
+      final requestData = <String, dynamic>{
         'blood_group': _selectedBloodGroup,
         'quantity': _quantity,
-        'urgency_level': _urgencyLevel,
-        'fulfillment_type': _fulfillmentType,
-        'patient_name': _patientNameController.text.trim(),
-        'contact_phone': _contactPhoneController.text.trim(),
+        'urgency': mappedUrgency,
+        'urgency_level': mappedUrgency,
+        'fulfillment_type': _fulfillmentType == 'DONOR_DISPATCH' ? 'DIRECT_DONATION' : _fulfillmentType,
+        'reason': _reason ?? '',
         'notes': _notesController.text.trim(),
+        'is_emergency': _isEmergency,
         if (_selectedHospitalId != null) 'hospital_id': int.parse(_selectedHospitalId!),
         if (_selectedHospitalName != null) 'hospital_name': _selectedHospitalName,
       };
@@ -230,6 +262,31 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
                 // Card Section: Hospital
                 _buildCardSection(
                   title: 'Select Destination Hospital',
+                  action: TextButton.icon(
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => CheckBloodAvailabilityDialog(
+                        initialBloodGroup: _selectedBloodGroup,
+                        initialQuantity: _quantity,
+                        onSelectHospital: (h) {
+                          setState(() {
+                            _selectedHospitalId = h['hospital_id'].toString();
+                            _selectedHospitalName = h['hospital_name'];
+                            _hospitalController.text = h['hospital_name'] ?? '';
+                            _fulfillmentType = 'INVENTORY';
+                            if (h['blood_group'] != null) {
+                              _selectedBloodGroup = h['blood_group'];
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                    icon: const Icon(Icons.search_rounded, size: 16),
+                    label: const Text('Check Availability'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                    ),
+                  ),
                   child: _buildHospitalDropdown(),
                 ),
                 SizedBox(height: 16.h),
@@ -305,7 +362,7 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
     );
   }
 
-  Widget _buildCardSection({required String title, required Widget child}) {
+  Widget _buildCardSection({required String title, required Widget child, Widget? action}) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -323,13 +380,19 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.onSurface.withOpacity(0.85),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.onSurface.withOpacity(0.85),
+                ),
+              ),
+              if (action != null) action,
+            ],
           ),
           SizedBox(height: 16.h),
           child,

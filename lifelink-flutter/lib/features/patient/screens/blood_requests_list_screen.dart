@@ -216,8 +216,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppTheme.error),
         );
       }
     } finally {
@@ -389,8 +390,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppTheme.error),
         );
       }
     } finally {
@@ -409,8 +411,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppTheme.error),
         );
       }
     } finally {
@@ -1077,11 +1080,37 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                   child: const Text('Reject'),
                 ),
                 SizedBox(width: 12.w),
-                ElevatedButton(
-                  onPressed: () => _handleApprove(request),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
-                  child: const Text('Approve'),
-                ),
+                if (request.fulfillmentType == 'INVENTORY' && request.paymentStatus.toUpperCase() == 'PENDING') ...[
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: Colors.amber.shade400),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.hourglass_top_rounded, color: Colors.amber.shade800, size: 14.sp),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Awaiting Patient Payment',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  ElevatedButton(
+                    onPressed: () => _handleApprove(request),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
+                    child: const Text('Approve'),
+                  ),
+                ],
               ],
             ),
           ],

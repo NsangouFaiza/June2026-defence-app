@@ -10,6 +10,7 @@ import '../../../../data/models/hospital_model.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../payment/screens/receipt_history_screen.dart';
+import '../../../widgets/floating_ai_assistant_button.dart';
 
 class HospitalDashboardScreen extends ConsumerStatefulWidget {
   const HospitalDashboardScreen({super.key});
@@ -146,6 +147,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
       length: 2,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
+        floatingActionButton: const FloatingAiAssistantButton(),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -185,26 +187,43 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                 if (snapshot.connectionState == ConnectionState.waiting && !_isInitialized && _hospital == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError && !_isInitialized && _hospital == null) {
-                  return Center(child: Text('Error loading hospital profile: ${snapshot.error}'));
+                if (snapshot.connectionState == ConnectionState.waiting && _hospital == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError && _hospital == null) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, size: 48, color: AppTheme.error),
+                          SizedBox(height: 16.h),
+                          Text('Failed to load hospital profile', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 8.h),
+                          Text('${snapshot.error}', style: TextStyle(fontSize: 12.sp, color: AppTheme.onSurfaceVariant), textAlign: TextAlign.center),
+                          SizedBox(height: 16.h),
+                          ElevatedButton.icon(
+                            onPressed: () => setState(() {
+                              _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
+                            }),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
 
                 if (snapshot.hasData && snapshot.data != null) {
                   _hospital = snapshot.data;
                   _isInitialized = true;
-                } else if (!_isInitialized && _hospital == null) {
-                  _hospital = HospitalModel(
-                    id: 1,
-                    name: 'Central Hospital Yaoundé',
-                    address: 'Avenue Kennedy, Yaoundé',
-                    city: 'Yaounde',
-                    region: 'Centre',
-                    phoneNumber: '+237 222 000 000',
-                    email: 'contact@centralhospital.org',
-                    description: 'Main regional hospital and blood bank coordination center.',
-                    isActive: true,
-                  );
-                  _isInitialized = true;
+                }
+
+                if (_hospital == null) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final hospital = _hospital!;
@@ -476,8 +495,8 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                               children: [
                                                 Text(
                                                   hospital.computedIsSubscriptionActive
-                                                      ? localization.translate('subscription_active_desc')
-                                                      : localization.translate('subscription_expired_inactive'),
+                                                      ? 'Subscription Status: Active'
+                                                      : 'Subscription Status: Inactive / Not Subscribed',
                                                   style: TextStyle(
                                                     fontSize: 13.sp,
                                                     fontWeight: FontWeight.bold,
@@ -486,17 +505,17 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                                         : AppTheme.error,
                                                   ),
                                                 ),
-                                                if (hospital.subscriptionEndDate != null) ...[
-                                                  SizedBox(height: 2.h),
-                                                  Text(
-                                                    '${localization.translate('valid_until')}: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
-                                                    style: TextStyle(
-                                                      fontSize: 11.sp,
-                                                      color: AppTheme.onSurfaceVariant,
+                                                SizedBox(height: 4.h),
+                                                if (hospital.computedIsSubscriptionActive) ...[
+                                                  if (hospital.subscriptionEndDate != null) ...[
+                                                    Text(
+                                                      '${localization.translate('valid_until')}: ${hospital.subscriptionEndDate.toString().substring(0, 10)}',
+                                                      style: TextStyle(
+                                                        fontSize: 11.sp,
+                                                        color: AppTheme.onSurfaceVariant,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
-                                                if (hospital.computedIsSubscriptionActive && hospital.subscriptionEndDate != null) ...[
+                                                  ],
                                                   SizedBox(height: 2.h),
                                                   Row(
                                                     children: [
@@ -511,6 +530,15 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                                         ),
                                                       ),
                                                     ],
+                                                  ),
+                                                ] else ...[
+                                                  Text(
+                                                    'Your hospital is currently not visible to other users. Complete your subscription payment to make your hospital available in the system.',
+                                                    style: TextStyle(
+                                                      fontSize: 11.sp,
+                                                      color: AppTheme.error.withOpacity(0.9),
+                                                      height: 1.3,
+                                                    ),
                                                   ),
                                                 ],
                                               ],
@@ -558,7 +586,7 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                             label: Text(
                                               hospital.computedIsSubscriptionActive
                                                   ? 'Extend Subscription'
-                                                  : localization.translate('renew_subscription'),
+                                                  : 'Pay / Activate Subscription',
                                               style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.bold),
                                             ),
                                           ),

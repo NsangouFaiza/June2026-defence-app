@@ -24,14 +24,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             try:
                 staff = HospitalStaff.objects.get(user=self.user)
                 hospital = staff.hospital
-                if not hospital.is_subscription_active:
-                    raise serializers.ValidationError({
-                        'detail': 'Hospital subscription is inactive or expired. Please renew your subscription to access the application.',
-                        'code': 'SUBSCRIPTION_EXPIRED',
-                        'hospital_id': hospital.id,
-                        'hospital_name': hospital.name,
-                        'subscription_end_date': hospital.subscription_end_date.isoformat() if hospital.subscription_end_date else None,
-                    })
+                data['hospital'] = {
+                    'id': hospital.id,
+                    'name': hospital.name,
+                    'subscription_status': hospital.subscription_status,
+                    'is_subscription_active': hospital.is_subscription_active,
+                    'subscription_end_date': hospital.subscription_end_date.isoformat() if hospital.subscription_end_date else None,
+                }
             except HospitalStaff.DoesNotExist:
                 pass
 

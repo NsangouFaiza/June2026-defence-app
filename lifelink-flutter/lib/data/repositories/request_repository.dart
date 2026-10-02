@@ -32,6 +32,13 @@ class RequestRepository {
       final response = await _apiService.post('/requests/', data);
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final d = e.response!.data;
+        if (d is Map) {
+          final errMsgs = d.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
+          throw Exception(errMsgs);
+        }
+      }
       throw Exception('Failed to create request: $e');
     }
   }
@@ -57,53 +64,72 @@ class RequestRepository {
     }
   }
 
+    String _extractError(dynamic e, String fallback) {
+    if (e is DioException && e.response?.data != null) {
+      final d = e.response!.data;
+      if (d is Map) {
+        if (d.containsKey('error') && d['error'] != null) {
+          return d['error'].toString();
+        }
+        if (d.containsKey('detail') && d['detail'] != null) {
+          return d['detail'].toString();
+        }
+        final msgs = d.entries.map((entry) => ': ').join(', ');
+        if (msgs.trim().isNotEmpty) return msgs.trim();
+      } else if (d is String && d.trim().isNotEmpty) {
+        return d.trim();
+      }
+    }
+    return fallback;
+  }
+
   Future<void> cancelRequest(int id) async {
     try {
-      await _apiService.post('/requests/$id/cancel/');
+      await _apiService.post('/requests//cancel/');
     } catch (e) {
-      throw Exception('Failed to cancel request: $e');
+      throw Exception(_extractError(e, 'Failed to cancel request: '));
     }
   }
 
   Future<BloodRequestModel> approveRequest(int id, String fulfillmentType, {int? donorId}) async {
     try {
-      final response = await _apiService.post('/requests/$id/approve/', {
+      final response = await _apiService.post('/requests//approve/', {
         'fulfillment_type': fulfillmentType,
         if (donorId != null) 'donor_id': donorId,
       });
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to approve request: $e');
+      throw Exception(_extractError(e, 'Failed to approve request: '));
     }
   }
 
   Future<BloodRequestModel> updateFulfillment(int id, String fulfillmentType, {int? donorId}) async {
     try {
-      final response = await _apiService.post('/requests/$id/update-fulfillment/', {
+      final response = await _apiService.post('/requests//update-fulfillment/', {
         'fulfillment_type': fulfillmentType,
         if (donorId != null) 'donor_id': donorId,
       });
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to update fulfillment: $e');
+      throw Exception(_extractError(e, 'Failed to update fulfillment: '));
     }
   }
 
   Future<BloodRequestModel> rejectRequest(int id, String reason) async {
     try {
-      final response = await _apiService.post('/requests/$id/reject/', {'reason': reason});
+      final response = await _apiService.post('/requests//reject/', {'reason': reason});
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to reject request: $e');
+      throw Exception(_extractError(e, 'Failed to reject request: '));
     }
   }
 
   Future<BloodRequestModel> fulfillRequest(int id) async {
     try {
-      final response = await _apiService.post('/requests/$id/fulfill/');
+      final response = await _apiService.post('/requests//fulfill/');
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Failed to fulfill request: $e');
+      throw Exception(_extractError(e, 'Failed to fulfill request: '));
     }
   }
 

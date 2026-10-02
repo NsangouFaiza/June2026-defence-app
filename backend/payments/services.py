@@ -62,6 +62,9 @@ class CampayPaymentProvider(BasePaymentProvider):
         if self.token:
             return self.token
 
+        if not self.username or not self.password:
+            return ''
+
         import urllib.request
         import json
         url = f"{self.base_url}/token/"
@@ -103,7 +106,7 @@ class CampayPaymentProvider(BasePaymentProvider):
             raise ValueError("Transaction reference is required.")
 
         # Format phone number for Cameroon (must have 237 prefix)
-        phone = phone_number.strip().replace(' ', '').replace('+', '')
+        phone = phone_number.strip().replace(' ', '').replace('+', '').replace('-', '')
         if not phone.startswith('237'):
             phone = f"237{phone}"
 
@@ -116,7 +119,7 @@ class CampayPaymentProvider(BasePaymentProvider):
         token = self._get_auth_token()
         if not token:
             logger.error("[Campay] Authentication failed. Token could not be retrieved.")
-            raise ValueError("Failed to authenticate with Campay payment gateway.")
+            raise ValueError("Campay credentials are not configured or invalid. A genuine Campay payment cannot be initiated without active credentials.")
         logger.info("[Campay] Authentication successful. Token retrieved.")
 
         url = f"{self.base_url}/collect/"
@@ -180,29 +183,17 @@ class CampayPaymentProvider(BasePaymentProvider):
                         pass
                 except Exception:
                     pass
-
-            if self.environment == 'sandbox':
-                logger.info("Campay Sandbox fallback mode active")
-                mock_ref = f"CAMPAY-MOCK-{uuid.uuid4().hex[:12].upper()}"
-                return PaymentResult(
-                    success=True,
-                    transaction_id=reference,
-                    external_reference=mock_ref,
-                    status='PENDING',
-                    response_data={'provider': 'Campay', 'mode': 'sandbox_mock', 'details': str(e)},
-                    message='Campay sandbox mock payment initiated (stub fallback).'
-                )
             raise ValueError(f"Campay payment initiation failed: {e}")
 
     def verify(self, external_reference: str) -> PaymentResult:
-        if external_reference.startswith('CAMPAY-MOCK'):
+        if not external_reference or external_reference.startswith('CAMPAY-MOCK') or external_reference.startswith('TXN-'):
             return PaymentResult(
-                success=True,
-                transaction_id=external_reference,
-                external_reference=external_reference,
-                status='SUCCESS',
-                response_data={'provider': 'Campay', 'verified': True, 'mock': True},
-                message='Campay mock payment verified successfully.'
+                success=False,
+                transaction_id=external_reference or '',
+                external_reference=external_reference or '',
+                status='FAILED',
+                response_data={'error': 'Invalid or unconfirmed transaction reference'},
+                message='A genuine confirmed Campay transaction reference is required. Mock or local IDs cannot be verified as payment proof.'
             )
 
         import urllib.request
@@ -210,6 +201,16 @@ class CampayPaymentProvider(BasePaymentProvider):
         
         logger.info(f"[Campay] Starting status verification for reference: {external_reference}")
         token = self._get_auth_token()
+        if not token:
+            return PaymentResult(
+                success=False,
+                transaction_id=external_reference,
+                external_reference=external_reference,
+                status='FAILED',
+                response_data={'error': 'Campay credentials not configured'},
+                message='Campay authentication token unavailable for verification.'
+            )
+
         url = f"{self.base_url}/transaction/{external_reference}/"
 
         print("--- Outgoing Request Sent from Django to Campay (Status Check) ---", flush=True)

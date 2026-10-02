@@ -162,20 +162,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           SnackBar(content: Text(localization.translate('registration_success'))),
         );
 
-        if (res['requires_payment'] == true || (user != null && user.role == 'hospital_staff' && res['requires_payment'] != false)) {
-          final hospitalObj = res['hospital'] as Map<String, dynamic>?;
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/hospital-subscription-payment',
-            (route) => false,
-            arguments: {
-              'hospitalId': hospitalObj?['id'],
-              'hospitalName': hospitalObj?['name'] ?? _hospitalNameController.text.trim(),
-            },
-          );
-        } else {
-          final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
-          Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
-        }
+        final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
+        Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
       }
     } catch (e) {
       if (mounted) {

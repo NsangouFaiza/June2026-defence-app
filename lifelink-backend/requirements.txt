@@ -5,7 +5,7 @@ django-cors-headers==4.3.1
 django-filter==23.5
 
 # JWT Authentication
-djangorestframework-simplejwt==5.3.0
+djangorestframework-simplejwt>=5.4.0
 
 # WebSocket (real-time chat)
 channels==4.0.0
@@ -28,6 +28,6 @@ firebase-admin>=6.2.0
 # Development
 django-debug-toolbar==4.2.0
 
-# Production
+# Production (PostgreSQL driver - not needed for local SQLite dev)
 gunicorn==21.2.0
-psycopg2-binary==2.9.9
+# psycopg2-binary==2.9.9

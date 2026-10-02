@@ -170,12 +170,29 @@ class _HospitalSubscriptionPaymentScreenState
         final paymentId = paymentData['id'] as int;
         final initialStatus = (paymentData['status'] ?? 'PENDING').toString().toUpperCase();
 
-        if (initialStatus == 'PENDING' && (_selectedMethod == 'MTN_MOMO' || _selectedMethod == 'ORANGE_MONEY')) {
+        if (initialStatus == 'PENDING') {
           _waitForPaymentCompletion(paymentId, (successPaymentJson) {
-            _showInvoiceDialog(successPaymentJson);
+            final vStatus = (successPaymentJson['status'] ?? '').toString().toUpperCase();
+            if (vStatus == 'SUCCESS') {
+              _showInvoiceDialog(successPaymentJson);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Payment not confirmed by Campay (Status: $vStatus). Subscription remains inactive.'),
+                  backgroundColor: AppTheme.warning,
+                ),
+              );
+            }
           });
-        } else {
+        } else if (initialStatus == 'SUCCESS') {
           _showInvoiceDialog(paymentData);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Payment initiation failed or was rejected (Status: $initialStatus). Subscription remains inactive.'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -252,7 +269,7 @@ class _HospitalSubscriptionPaymentScreenState
               _buildReceiptRow('Amount Paid', '${double.parse(payment['amount'].toString()).toStringAsFixed(0)} FCFA'),
               _buildReceiptRow('Period Covered', '${payment['months']} Month(s)'),
               _buildReceiptRow('Payment Method', payment['payment_method'] ?? _selectedMethod),
-              _buildReceiptRow('Transaction ID', payment['transaction_id'] ?? 'TXN'),
+              _buildReceiptRow('Reference ID', payment['transaction_reference'] ?? payment['external_reference'] ?? payment['transaction_id'] ?? 'TXN'),
               _buildReceiptRow('Status', payment['status'] ?? 'SUCCESS', color: AppTheme.success),
               SizedBox(height: 8.h),
               const Divider(),
@@ -262,6 +279,10 @@ class _HospitalSubscriptionPaymentScreenState
                 () {
                   if (payment['subscription_period_end'] != null) {
                     final raw = payment['subscription_period_end'].toString();
+                    if (raw.length >= 10) return raw.substring(0, 10);
+                  }
+                  if (payment['subscription_end_date'] != null) {
+                    final raw = payment['subscription_end_date'].toString();
                     if (raw.length >= 10) return raw.substring(0, 10);
                   }
                   final months = payment['months'] is int ? payment['months'] as int : _selectedMonths;

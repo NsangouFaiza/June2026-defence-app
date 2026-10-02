@@ -1,3 +1,4 @@
+import '../widgets/check_blood_availability_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../../data/models/blood_inventory_model.dart';
 import '../../../../data/models/hospital_model.dart';
 import '../../../../data/models/donor_model.dart';
 import '../../payment/screens/receipt_history_screen.dart';
+import '../../../widgets/floating_ai_assistant_button.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
@@ -301,6 +303,76 @@ class PatientDashboardScreen extends ConsumerWidget {
                               ),
                             ),
                             SizedBox(height: 12.h),
+
+                            // Prominent Check Blood Availability Banner
+                            Container(
+                              margin: EdgeInsets.only(bottom: 14.h),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF00897B), Color(0xFF004D40)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF004D40).withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => showDialog(
+                                    context: context,
+                                    builder: (context) => const CheckBloodAvailabilityDialog(),
+                                  ),
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(10.w),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(12.r),
+                                          ),
+                                          child: Icon(Icons.search_rounded, color: Colors.white, size: 24.sp),
+                                        ),
+                                        SizedBox(width: 14.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Check Blood Availability',
+                                                style: TextStyle(
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              SizedBox(height: 2.h),
+                                              Text(
+                                                'Search verified hospitals with your blood group in stock',
+                                                style: TextStyle(
+                                                  fontSize: 11.sp,
+                                                  color: Colors.white.withOpacity(0.85),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14.sp),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                             GridView.count(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -415,12 +487,21 @@ class PatientDashboardScreen extends ConsumerWidget {
             const ReceiptHistoryScreen(isTab: true),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => Navigator.of(context).pushNamed('/emergency-request'),
-          backgroundColor: AppTheme.error,
-          icon: const Icon(Icons.emergency_rounded, color: Colors.white),
-          label: const Text('EMERGENCY SOS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-          elevation: 6,
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const FloatingAiAssistantButton(),
+            SizedBox(height: 12.h),
+            FloatingActionButton.extended(
+              heroTag: 'patient_emergency_sos_btn',
+              onPressed: () => Navigator.of(context).pushNamed('/emergency-request'),
+              backgroundColor: AppTheme.error,
+              icon: const Icon(Icons.emergency_rounded, color: Colors.white),
+              label: const Text('EMERGENCY SOS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              elevation: 6,
+            ),
+          ],
         ),
       ),
     );

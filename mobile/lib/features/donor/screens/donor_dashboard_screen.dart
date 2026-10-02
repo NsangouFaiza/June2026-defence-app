@@ -5,6 +5,7 @@ import '../../../core/providers/providers.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/donor_model.dart';
+import '../../../widgets/floating_ai_assistant_button.dart';
 
 class DonorDashboardScreen extends ConsumerWidget {
   const DonorDashboardScreen({super.key});
@@ -18,6 +19,7 @@ class DonorDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: const FloatingAiAssistantButton(),
       body: FutureBuilder<DonorModel?>(
         future: donorRepo.getCurrentDonorProfile(),
         builder: (context, snapshot) {
@@ -31,6 +33,7 @@ class DonorDashboardScreen extends ConsumerWidget {
           final donor = snapshot.data;
           if (donor == null) {
             return Scaffold(
+              floatingActionButton: const FloatingAiAssistantButton(),
               appBar: AppBar(
                 title: Text(localization.translate('donor_dashboard')),
                 actions: [

@@ -9,6 +9,7 @@ import '../../../../data/repositories/inventory_repository.dart';
 import '../../../../data/models/appointment_model.dart';
 import '../../../../data/models/donation_model.dart';
 import '../../../../data/models/blood_inventory_model.dart';
+import '../../../widgets/floating_ai_assistant_button.dart';
 
 class LabDashboardScreen extends ConsumerStatefulWidget {
   const LabDashboardScreen({super.key});
@@ -793,6 +794,7 @@ class _LabDashboardScreenState extends ConsumerState<LabDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      floatingActionButton: const FloatingAiAssistantButton(),
       appBar: AppBar(
         title: const Text('Laboratory Dashboard'),
         backgroundColor: AppTheme.primaryColor,

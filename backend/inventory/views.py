@@ -27,18 +27,26 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
     search_fields = ['hospital__name', 'blood_group']
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'search']:
+        if self.action in ['list', 'retrieve', 'search', 'check_availability']:
             return [permissions.AllowAny()]
         return [IsStaffOrTechnicianOrAdmin()]
 
     @action(detail=False, methods=['get'])
     def search(self, request):
         """Search blood inventory by filters."""
+        from django.utils import timezone
+        now = timezone.now()
         blood_group = request.query_params.get('blood_group')
         region = request.query_params.get('region')
         hospital_id = request.query_params.get('hospital')
 
-        queryset = BloodInventory.objects.filter(status='available')
+        queryset = BloodInventory.objects.filter(
+            status='available',
+            expiration_date__gte=now.date(),
+            hospital__is_active=True,
+            hospital__subscription_status='ACTIVE',
+            hospital__subscription_end_date__gte=now
+        )
 
         if blood_group:
             queryset = queryset.filter(blood_group=blood_group)
@@ -49,6 +57,85 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get', 'post'], url_path='check_availability')
+    def check_availability(self, request):
+        """Check blood availability across active/paid hospitals for patient."""
+        from django.utils import timezone
+        from django.db.models import Sum
+
+        data = request.data if request.method == 'POST' else request.query_params
+        blood_group = data.get('blood_group')
+        quantity_raw = data.get('quantity', 1)
+        try:
+            quantity = int(quantity_raw)
+            if quantity <= 0:
+                quantity = 1
+        except (ValueError, TypeError):
+            quantity = 1
+
+        if not blood_group:
+            return Response(
+                {'error': 'Blood group is required to check blood availability.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        now = timezone.now()
+        today = now.date()
+
+        # Query available units in hospitals that have an active subscription
+        hospitals_with_blood = (
+            BloodInventory.objects.filter(
+                status='available',
+                expiration_date__gte=today,
+                blood_group=blood_group,
+                hospital__is_active=True,
+                hospital__subscription_status='ACTIVE',
+                hospital__subscription_end_date__gte=now,
+            )
+            .values(
+                'hospital__id',
+                'hospital__name',
+                'hospital__address',
+                'hospital__city',
+                'hospital__region',
+                'hospital__phone_number',
+                'hospital__email',
+                'hospital__has_emergency_services',
+                'hospital__latitude',
+                'hospital__longitude',
+            )
+            .annotate(available_units=Sum('quantity'))
+            .filter(available_units__gt=0)
+            .order_by('-available_units')
+        )
+
+        results = []
+        for h in hospitals_with_blood:
+            avail = h['available_units'] or 0
+            results.append({
+                'hospital_id': h['hospital__id'],
+                'hospital_name': h['hospital__name'],
+                'address': h['hospital__address'] or '',
+                'city': h['hospital__city'] or '',
+                'region': h['hospital__region'] or '',
+                'phone_number': h['hospital__phone_number'] or '',
+                'email': h['hospital__email'] or '',
+                'has_emergency_services': h['hospital__has_emergency_services'] or False,
+                'latitude': h['hospital__latitude'],
+                'longitude': h['hospital__longitude'],
+                'blood_group': blood_group,
+                'available_units': avail,
+                'requested_quantity': quantity,
+                'is_sufficient': avail >= quantity,
+            })
+
+        return Response({
+            'blood_group': blood_group,
+            'requested_quantity': quantity,
+            'total_hospitals_found': len(results),
+            'hospitals': results,
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def low_stock(self, request):

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/providers.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/localization_service.dart';
-import '../../../../data/repositories/donor_repository.dart';
 import '../../../../data/models/donor_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../widgets/lifelink_app_bar.dart';
@@ -468,7 +466,7 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
                       ),
                       SizedBox(height: 12.h),
                       _buildInfoRow(Icons.phone, donor.phoneNumber),
-                      _buildInfoRow(Icons.email, donor.email),
+                      _buildEmailRow(donor),
                       _buildInfoRow(Icons.location_on, '${donor.city}, ${donor.region}'),
                     ],
                   ),
@@ -515,7 +513,10 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(elevation: 2),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 2,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
                       onPressed: () {
                         Navigator.of(context).pushNamed(
                           '/chat',
@@ -526,28 +527,30 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
                       label: Text(localization.translate('chat')),
                     ),
                   ),
-                  SizedBox(width: 16.w),
+                  SizedBox(width: 8.w),
                   Expanded(
                     child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(elevation: 2),
-                      onPressed: () async {
-                        final url = Uri.parse('tel:${donor.phoneNumber}');
-                        try {
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url);
-                          } else {
-                            throw 'Could not launch dialer';
-                          }
-                        } catch (_) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Calling ${donor.fullName} at ${donor.phoneNumber}...')),
-                            );
-                          }
-                        }
-                      },
+                      style: ElevatedButton.styleFrom(
+                        elevation: 2,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onPressed: () => _callPhoneNumber(donor.phoneNumber, donor.fullName),
                       icon: const Icon(Icons.phone_outlined),
                       label: Text(localization.translate('call')),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        elevation: 2,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        backgroundColor: const Color(0xFF1E88E5),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => _launchEmail(donor.email, donor.fullName),
+                      icon: const Icon(Icons.email_outlined),
+                      label: Text(localization.translate('email')),
                     ),
                   ),
                 ],
@@ -575,6 +578,162 @@ class _DonorDetailsScreenState extends ConsumerState<DonorDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildEmailRow(DonorModel donor) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      child: Row(
+        children: [
+          Icon(Icons.email_outlined, size: 20.w, color: AppTheme.primaryColor),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Text(
+              donor.formattedEmail,
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: _isValidEmail(donor.email) ? null : AppTheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          ElevatedButton.icon(
+            key: const Key('contact_donor_email_action_btn'),
+            onPressed: () => _launchEmail(donor.email, donor.fullName),
+            icon: Icon(Icons.email_outlined, size: 15.sp),
+            label: Text(
+              'Email',
+              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              minimumSize: Size(0, 34.h),
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _callPhoneNumber(String phoneNumber, String fullName) async {
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty || cleanPhone.toLowerCase() == 'null') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No valid phone number available for $fullName.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
+      return;
+    }
+    final url = Uri.parse('tel:$cleanPhone');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        await launchUrl(url);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Calling $fullName at $cleanPhone...')),
+        );
+      }
+    }
+  }
+
+  bool _isValidEmail(String? email) {
+    if (email == null) return false;
+    final trimmed = email.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return false;
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
+    );
+    return emailRegex.hasMatch(trimmed);
+  }
+
+  String? _encodeQueryParameters(Map<String, String> params) {
+    return params.entries
+        .map((MapEntry<String, String> e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+  }
+
+  Future<void> _launchEmail(String? emailAddress, String donorName) async {
+    final rawEmail = (emailAddress ?? '').trim();
+    if (!_isValidEmail(rawEmail)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.white),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(
+                    'No valid email address registered for $donorName.',
+                    style: TextStyle(fontSize: 13.sp, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.warning,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: rawEmail,
+      query: _encodeQueryParameters(<String, String>{
+        'subject': 'LifeLink - Blood Donation Inquiry',
+      }),
+    );
+
+    try {
+      final launched = await launchUrl(
+        emailLaunchUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        final fallbackSuccess = await launchUrl(emailLaunchUri);
+        if (!fallbackSuccess && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open email application for $rawEmail.'),
+              backgroundColor: AppTheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not launch email app: $e'),
+            backgroundColor: AppTheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildStatItem(BuildContext context, String value, String label) {

@@ -25,7 +25,19 @@ class HospitalViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'address', 'city', 'region', 'description', 'services']
 
     def get_queryset(self):
+        user = getattr(self.request, 'user', None)
         queryset = Hospital.objects.all()
+
+        # Non-admin users only see hospitals that have an active, valid subscription
+        is_admin = user and user.is_authenticated and (user.role == 'system_admin' or user.is_staff or user.is_superuser)
+        if not is_admin and self.action == 'list':
+            now = timezone.now()
+            queryset = queryset.filter(
+                is_active=True,
+                subscription_status='ACTIVE',
+                subscription_end_date__gte=now
+            )
+
         lat_param = self.request.query_params.get('lat')
         lng_param = self.request.query_params.get('lng')
         sort_param = self.request.query_params.get('sort')
@@ -46,9 +58,11 @@ class HospitalViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'pay_subscription', 'subscription_history', 'invoice_detail']:
             return [permissions.AllowAny()]
+        if self.action in ['my_hospital', 'my_hospital_alias', 'statistics']:
+            return [permissions.IsAuthenticated()]
         return [permissions.IsAdminUser()]
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='my_hospital')
     def my_hospital(self, request):
         """Get the hospital associated with the current user."""
         try:
@@ -69,6 +83,11 @@ class HospitalViewSet(viewsets.ModelViewSet):
                 {'detail': 'No hospital assigned to this user.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    @action(detail=False, methods=['get'], url_path='my-hospital')
+    def my_hospital_alias(self, request):
+        """Alias for my-hospital (hyphenated) to ensure frontend compatibility."""
+        return self.my_hospital(request)
 
 
     @action(detail=False, methods=['get'])
@@ -195,7 +214,10 @@ class HospitalViewSet(viewsets.ModelViewSet):
                 )
                 hospital.refresh_from_db()
         except Exception as exc:
-            payment.delete()
+            payment.status = 'FAILED'
+            payment.payment_status = 'FAILED'
+            payment.response_data = {'error': str(exc)}
+            payment.save(update_fields=['status', 'payment_status', 'response_data'])
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = PaymentSerializer(payment)
@@ -236,15 +258,15 @@ class HospitalViewSet(viewsets.ModelViewSet):
 
         if hospital_id:
             try:
-                queryset = queryset.filter(hospital_id=hospital_id)
+                queryset = queryset.filter(Q(hospital_id=hospital_id) | Q(user=user))
             except (ValueError, TypeError):
                 return Response([], status=status.HTTP_200_OK)
         elif user and user.is_authenticated:
             staff_profile = HospitalStaff.objects.filter(user=user).first()
             if staff_profile and staff_profile.hospital:
-                queryset = queryset.filter(hospital=staff_profile.hospital)
+                queryset = queryset.filter(Q(hospital=staff_profile.hospital) | Q(user=user))
             elif not (user.role == 'system_admin' or user.is_staff or user.is_superuser):
-                return Response([], status=status.HTTP_200_OK)
+                queryset = queryset.filter(user=user)
         else:
             return Response([], status=status.HTTP_200_OK)
 

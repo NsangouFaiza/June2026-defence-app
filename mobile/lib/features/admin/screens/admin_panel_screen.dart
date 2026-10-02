@@ -10,6 +10,7 @@ import '../../../../data/models/user_model.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../payment/screens/receipt_history_screen.dart';
 import '../../../../widgets/lifelink_app_bar.dart';
+import '../../../../widgets/floating_ai_assistant_button.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -24,6 +25,7 @@ class AdminPanelScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
+        floatingActionButton: const FloatingAiAssistantButton(),
         appBar: LifeLinkAppBar(
           title: localization.translate('admin_panel'),
           subtitle: user != null ? 'Welcome Back, ${user.fullName}' : null,

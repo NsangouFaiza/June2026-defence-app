@@ -58,6 +58,20 @@ class BloodRequestSerializer(serializers.ModelSerializer):
         from hospitals.serializers import HospitalSerializer
         return HospitalSerializer(obj.hospital).data
 
+    def to_internal_value(self, data):
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        elif isinstance(data, dict):
+            data = dict(data)
+        if isinstance(data, dict):
+            if 'urgency_level' in data and 'urgency' not in data:
+                data['urgency'] = data['urgency_level']
+            if data.get('urgency') == 'NORMAL':
+                data['urgency'] = 'MEDIUM'
+            if data.get('fulfillment_type') == 'DONOR_DISPATCH':
+                data['fulfillment_type'] = 'DIRECT_DONATION'
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         patient_id = attrs.pop('patient_id', None)
         hospital_id = attrs.pop('hospital_id', None)
@@ -84,6 +98,11 @@ class BloodRequestSerializer(serializers.ModelSerializer):
                 attrs['hospital'] = Hospital.objects.get(pk=hospital_id)
             except Hospital.DoesNotExist:
                 raise serializers.ValidationError({'hospital_id': 'Invalid hospital ID'})
+        elif is_emergency and not hospital_id:
+            from hospitals.models import Hospital
+            first_h = Hospital.objects.filter(is_active=True).first() or Hospital.objects.first()
+            if first_h:
+                attrs['hospital'] = first_h
 
         if donor_id:
             from donors.models import Donor

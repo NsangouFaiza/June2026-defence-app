@@ -25,6 +25,7 @@ import 'features/donors/screens/donor_list_screen.dart';
 import 'features/donors/screens/donor_details_screen.dart';
 import 'features/chat/screens/chat_screen.dart';
 import 'features/chat/screens/chat_list_screen.dart';
+import 'features/chat/screens/ai_chat_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/map/screens/hospital_locator_screen.dart';
 import 'features/appointments/screens/appointment_booking_screen.dart';
@@ -99,11 +100,21 @@ class LifeLinkApp extends ConsumerWidget {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
-            '/home': (context) => const RoleGuard(allowedRoles: [], child: HomeDashboardScreen()),
-            '/donor-dashboard': (context) => const RoleGuard(allowedRoles: ['donor'], child: DonorDashboardScreen()),
-            '/patient-dashboard': (context) => const RoleGuard(allowedRoles: ['patient'], child: PatientDashboardScreen()),
-            '/hospital-dashboard': (context) => const RoleGuard(allowedRoles: ['hospital_staff', 'blood_bank_staff'], child: HospitalDashboardScreen()),
-            '/lab-dashboard': (context) => const RoleGuard(allowedRoles: ['hospital_staff', 'blood_bank_staff', 'system_admin', 'blood_bank_admin'], child: LabDashboardScreen()),
+            '/home': (context) =>
+                const RoleGuard(allowedRoles: [], child: HomeDashboardScreen()),
+            '/donor-dashboard': (context) => const RoleGuard(
+                allowedRoles: ['donor'], child: DonorDashboardScreen()),
+            '/patient-dashboard': (context) => const RoleGuard(
+                allowedRoles: ['patient'], child: PatientDashboardScreen()),
+            '/hospital-dashboard': (context) => const RoleGuard(
+                allowedRoles: ['hospital_staff', 'blood_bank_staff'],
+                child: HospitalDashboardScreen()),
+            '/lab-dashboard': (context) => const RoleGuard(allowedRoles: [
+                  'hospital_staff',
+                  'blood_bank_staff',
+                  'system_admin',
+                  'blood_bank_admin'
+                ], child: LabDashboardScreen()),
             '/blood-inventory': (context) => const BloodInventoryScreen(),
             '/blood-request': (context) => const BloodRequestScreen(),
             '/blood-requests': (context) => const BloodRequestsListScreen(),
@@ -111,11 +122,13 @@ class LifeLinkApp extends ConsumerWidget {
             '/emergency-request': (context) => const EmergencyRequestScreen(),
             '/donor-list': (context) => const DonorListScreen(),
             '/donor-details': (context) {
-              final donorId = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+              final donorId =
+                  ModalRoute.of(context)?.settings.arguments as int? ?? 0;
               return DonorDetailsScreen(donorId: donorId);
             },
             '/chat': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final args = ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
               return ChatScreen(
                 conversationId: args?['conversationId'] as int?,
                 otherUserId: args?['otherUserId'] as int?,
@@ -123,13 +136,17 @@ class LifeLinkApp extends ConsumerWidget {
             },
             '/notifications': (context) => const NotificationsScreen(),
             '/hospital-locator': (context) => const HospitalLocatorScreen(),
-            '/available-blood-packs': (context) => const AvailableBloodPacksScreen(),
+            '/available-blood-packs': (context) =>
+                const AvailableBloodPacksScreen(),
             '/chat-list': (context) => const ChatListScreen(),
+            '/ai-chat': (context) => const AiChatScreen(),
             '/book-appointment': (context) => const AppointmentBookingScreen(),
-            '/appointment-history': (context) => const AppointmentHistoryScreen(),
+            '/appointment-history': (context) =>
+                const AppointmentHistoryScreen(),
             '/campaigns': (context) => const CampaignsScreen(),
             '/campaign-details': (context) {
-              final campaignId = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+              final campaignId =
+                  ModalRoute.of(context)?.settings.arguments as int? ?? 0;
               return CampaignDetailsScreen(campaignId: campaignId);
             },
             '/campaign-feed': (context) => const CampaignFeedScreen(),
@@ -138,21 +155,27 @@ class LifeLinkApp extends ConsumerWidget {
             '/leaderboard': (context) => const LeaderboardScreen(),
             '/impact-statistics': (context) => const ImpactStatisticsScreen(),
             '/reports': (context) => const ReportsScreen(),
-            '/manage-appointments': (context) => const ManageAppointmentsScreen(),
-            '/admin-panel': (context) => const RoleGuard(allowedRoles: ['system_admin', 'blood_bank_admin'], child: AdminPanelScreen()),
+            '/manage-appointments': (context) =>
+                const ManageAppointmentsScreen(),
+            '/admin-panel': (context) => const RoleGuard(
+                allowedRoles: ['system_admin', 'blood_bank_admin'],
+                child: AdminPanelScreen()),
             '/eligibility-check': (context) => const EligibilityCheckScreen(),
             '/donation-history': (context) => const DonationHistoryScreen(),
-            '/digital-donor-badge': (context) => const DigitalDonorBadgeScreen(),
+            '/digital-donor-badge': (context) =>
+                const DigitalDonorBadgeScreen(),
             '/health-records': (context) => const HealthRecordsScreen(),
             '/payment': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final args = ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
               return PaymentScreen(
                 requestId: args?['requestId'] as int? ?? 0,
                 amount: args?['amount'] as double? ?? 0.0,
               );
             },
             '/hospital-subscription-payment': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final args = ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
               return HospitalSubscriptionPaymentScreen(
                 hospitalId: args?['hospitalId'] as int?,
                 hospitalName: args?['hospitalName'] as String?,
@@ -160,7 +183,8 @@ class LifeLinkApp extends ConsumerWidget {
               );
             },
             '/hospital-subscription-history': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final args = ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
               return HospitalSubscriptionHistoryScreen(
                 hospitalId: args?['hospitalId'] as int?,
               );
@@ -184,7 +208,8 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      AppLocalizationsDelegate();
 
   String translate(String key) {
     final Map<String, Map<String, String>> translations = {
@@ -192,8 +217,8 @@ class AppLocalizations {
       'fr': LocalizationService.frenchTranslations,
     };
     return translations[locale.languageCode]?[key] ??
-           translations['en']?[key] ??
-           key;
+        translations['en']?[key] ??
+        key;
   }
 
   String get currentLanguage => locale.languageCode;

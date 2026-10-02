@@ -223,28 +223,30 @@ class PaymentHistoryView(APIView):
             # Get staff hospital subscription payments
             from hospitals.models import HospitalStaff
             staff_profile = HospitalStaff.objects.filter(user=user).first()
+            filter_q = Q(user=user)
             if staff_profile and staff_profile.hospital:
-                subs = Payment.objects.filter(hospital=staff_profile.hospital, payment_type='HOSPITAL_SUBSCRIPTION')
-                for s in subs:
-                    inv_num = s.invoices.first().invoice_number if s.invoices.exists() else f"INV-SUB-{s.id:04d}"
-                    h_name = staff_profile.hospital.name
-                    sub_period = f"{max(1, int(s.amount // 25))} Month(s)" if s.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
-                    receipts.append({
-                        'id': s.id,
-                        'receipt_number': s.receipts.first().receipt_number if s.receipts.exists() else (s.transaction_id or inv_num),
-                        'transaction_reference': s.transaction_reference or s.external_reference or s.transaction_id or "N/A",
-                        'user_name': user.full_name,
-                        'user_role': 'Hospital Staff',
-                        'created_at': s.created_at.isoformat(),
-                        'payment_type': 'Hospital Subscription',
-                        'description': f"Hospital subscription renew: {max(1, int(s.amount // 25))} Months plan.",
-                        'amount': float(s.amount),
-                        'payment_method': s.payment_method,
-                        'status': s.status,
-                        'reference_id': inv_num,
-                        'hospital_name': h_name,
-                        'subscription_period': sub_period,
-                    })
+                filter_q |= Q(hospital=staff_profile.hospital)
+            subs = Payment.objects.filter(filter_q, payment_type='HOSPITAL_SUBSCRIPTION').select_related('hospital', 'user')
+            for s in subs:
+                inv_num = s.invoices.first().invoice_number if s.invoices.exists() else f"INV-SUB-{s.id:04d}"
+                h_name = s.hospital.name if s.hospital else (staff_profile.hospital.name if staff_profile and staff_profile.hospital else "Hospital")
+                sub_period = f"{max(1, int(s.amount // 25))} Month(s)" if s.payment_type == 'HOSPITAL_SUBSCRIPTION' else None
+                receipts.append({
+                    'id': s.id,
+                    'receipt_number': s.receipts.first().receipt_number if s.receipts.exists() else (s.transaction_id or inv_num),
+                    'transaction_reference': s.transaction_reference or s.external_reference or s.transaction_id or "N/A",
+                    'user_name': s.user.full_name if s.user else user.full_name,
+                    'user_role': 'Hospital Staff',
+                    'created_at': s.created_at.isoformat(),
+                    'payment_type': 'Hospital Subscription',
+                    'description': f"Hospital subscription renew: {max(1, int(s.amount // 25))} Months plan.",
+                    'amount': float(s.amount),
+                    'payment_method': s.payment_method,
+                    'status': s.status,
+                    'reference_id': inv_num,
+                    'hospital_name': h_name,
+                    'subscription_period': sub_period,
+                })
 
         # Sort receipts by date descending
         receipts.sort(key=lambda x: x['created_at'], reverse=True)

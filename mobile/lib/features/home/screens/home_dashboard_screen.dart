@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/localization_service.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../data/models/user_model.dart';
+import '../../../widgets/floating_ai_assistant_button.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
   const HomeDashboardScreen({super.key});
@@ -16,6 +17,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
+      floatingActionButton: const FloatingAiAssistantButton(),
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,

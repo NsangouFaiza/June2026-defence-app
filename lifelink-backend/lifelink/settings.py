@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'payments.apps.PaymentsConfig',
     'audit.apps.AuditConfig',
     'reports.apps.ReportsConfig',
+    'ai_assistant.apps.AiAssistantConfig',
 ]
 
 MIDDLEWARE = [
@@ -96,12 +97,36 @@ CHANNEL_LAYERS = {
 }
 
 # Database
+# Canonical persistent SQLite database configuration across backend directories
+PROJECT_ROOT = BASE_DIR.parent if BASE_DIR.name in ('backend', 'lifelink-backend') else BASE_DIR
+CANONICAL_DB = PROJECT_ROOT / 'backend' / 'db.sqlite3'
+if not CANONICAL_DB.exists():
+    CANONICAL_DB = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': CANONICAL_DB,
+        'OPTIONS': {
+            'timeout': 60,
+        },
     }
 }
+
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def configure_sqlite_connection(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('PRAGMA journal_mode = WAL;')
+                cursor.execute('PRAGMA synchronous = NORMAL;')
+                cursor.execute('PRAGMA busy_timeout = 60000;')
+        except Exception:
+            pass
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -203,6 +228,9 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@lifelink.com')
 
 # Logging Configuration
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -212,7 +240,7 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': LOGS_DIR / 'django.log',
         },
     },
     'root': {
@@ -247,4 +275,8 @@ CAMPAY_USERNAME = config('CAMPAY_USERNAME', default='')
 CAMPAY_PASSWORD = config('CAMPAY_PASSWORD', default='')
 CAMPAY_TOKEN = config('CAMPAY_TOKEN', default='')
 CAMPAY_ENVIRONMENT = config('CAMPAY_ENVIRONMENT', default='sandbox')
+
+# AI Assistant Settings (Gemini / OpenAI API keys)
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 

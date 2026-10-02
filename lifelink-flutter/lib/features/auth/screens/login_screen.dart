@@ -47,45 +47,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final errStr = e.toString();
-        if (errStr.contains('SUBSCRIPTION_EXPIRED') || errStr.toLowerCase().contains('subscription is inactive') || errStr.toLowerCase().contains('renew your subscription')) {
-          showDialog(
-            context: context,
-            builder: (dialogContext) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(localization.translate('subscription_expired'))),
-                ],
-              ),
-              content: Text(
-                localization.translate('subscription_expired_desc'),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(localization.translate('cancel')),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    Navigator.of(context).pushNamed('/hospital-subscription-payment');
-                  },
-                  child: Text(localization.translate('renew_subscription')),
-                ),
-              ],
-            ),
-          );
-        } else {
-          final cleanErr = e.toString().replaceAll('Exception: ', '');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(cleanErr),
-              backgroundColor: AppTheme.error,
-            ),
-          );
-        }
+        final cleanErr = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(cleanErr),
+            backgroundColor: AppTheme.error,
+          ),
+        );
       }
 
     } finally {

@@ -58,8 +58,9 @@ class Hospital(models.Model):
         from django.utils import timezone
         now = timezone.now()
         base_date = payment_date or now
-        if self.subscription_end_date and self.subscription_end_date > now:
-            base_date = self.subscription_end_date
+        if self.is_subscription_active and self.subscription_status == 'ACTIVE' and self.subscription_end_date and self.subscription_end_date > now:
+            if self.subscription_end_date <= now + timezone.timedelta(days=366):
+                base_date = self.subscription_end_date
 
         try:
             from dateutil.relativedelta import relativedelta

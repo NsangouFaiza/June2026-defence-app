@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Seeding LifeLink demo data...')
 
-        admin, _ = User.objects.get_or_create(
+        admin, created = User.objects.get_or_create(
             email='admin@lifelink.com',
             defaults={
                 'full_name': 'System Administrator',
@@ -23,11 +23,12 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        admin.set_password('Admin@12345')
-        admin.is_verified = True
-        admin.save()
+        if created or not admin.has_usable_password():
+            admin.set_password('Admin@12345')
+            admin.is_verified = True
+            admin.save()
 
-        donor_user, _ = User.objects.get_or_create(
+        donor_user, created = User.objects.get_or_create(
             email='donor@lifelink.com',
             defaults={
                 'full_name': 'Jean Donor',
@@ -37,11 +38,12 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        donor_user.set_password('Donor@12345')
-        donor_user.is_verified = True
-        donor_user.save()
+        if created or not donor_user.has_usable_password():
+            donor_user.set_password('Donor@12345')
+            donor_user.is_verified = True
+            donor_user.save()
 
-        patient_user, _ = User.objects.get_or_create(
+        patient_user, created = User.objects.get_or_create(
             email='patient@lifelink.com',
             defaults={
                 'full_name': 'Marie Patient',
@@ -51,11 +53,12 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        patient_user.set_password('Patient@12345')
-        patient_user.is_verified = True
-        patient_user.save()
+        if created or not patient_user.has_usable_password():
+            patient_user.set_password('Patient@12345')
+            patient_user.is_verified = True
+            patient_user.save()
 
-        staff_user, _ = User.objects.get_or_create(
+        staff_user, created = User.objects.get_or_create(
             email='staff@lifelink.com',
             defaults={
                 'full_name': 'Paul Hospital Staff',
@@ -64,10 +67,26 @@ class Command(BaseCommand):
                 'is_verified': True,
             },
         )
-        staff_user.set_password('Staff@12345')
-        staff_user.is_verified = True
-        staff_user.save()
+        if created or not staff_user.has_usable_password():
+            staff_user.set_password('Staff@12345')
+            staff_user.is_verified = True
+            staff_user.save()
 
+        lab_user, created = User.objects.get_or_create(
+            email='lab@lifelink.com',
+            defaults={
+                'full_name': 'Dr. Lab Technician',
+                'phone_number': '+237600000005',
+                'role': 'hospital_staff',
+                'is_verified': True,
+            },
+        )
+        if created or not lab_user.has_usable_password():
+            lab_user.set_password('Lab@12345')
+            lab_user.is_verified = True
+            lab_user.save()
+
+        from django.utils import timezone
         from hospitals.models import Hospital, HospitalStaff
         from blood_banks.models import BloodBank
         from donors.models import Donor
@@ -75,6 +94,8 @@ class Command(BaseCommand):
         from inventory.models import BloodInventory
         from campaigns.models import Campaign
         from rewards.models import Badge
+        from requests.models import BloodRequest
+        from appointments.models import Appointment
 
         hospital, _ = Hospital.objects.get_or_create(
             name='Central Hospital Yaoundé',
@@ -87,13 +108,27 @@ class Command(BaseCommand):
                 'latitude': 3.8480,
                 'longitude': 11.5021,
                 'is_active': True,
+                'subscription_status': 'ACTIVE',
+                'subscription_end_date': timezone.now() + timedelta(days=365),
             },
         )
+        # Ensure subscription is active
+        if hospital.subscription_status != 'ACTIVE' or not hospital.subscription_end_date:
+            hospital.subscription_status = 'ACTIVE'
+            hospital.subscription_end_date = timezone.now() + timedelta(days=365)
+            hospital.is_active = True
+            hospital.save()
 
         HospitalStaff.objects.get_or_create(
             user=staff_user,
             hospital=hospital,
             defaults={'position': 'Inventory Manager', 'department': 'Blood Bank'},
+        )
+
+        HospitalStaff.objects.get_or_create(
+            user=lab_user,
+            hospital=hospital,
+            defaults={'position': 'Lab Technician', 'department': 'Laboratory'},
         )
 
         BloodBank.objects.get_or_create(
@@ -118,7 +153,7 @@ class Command(BaseCommand):
             },
         )
 
-        Patient.objects.get_or_create(
+        patient_profile, _ = Patient.objects.get_or_create(
             user=patient_user,
             defaults={
                 'medical_conditions': 'Scheduled surgery',
@@ -128,7 +163,11 @@ class Command(BaseCommand):
         )
 
         today = date.today()
-        for group, qty in [('O+', 12), ('A+', 8), ('B+', 5), ('AB+', 3)]:
+        blood_stock = [
+            ('O+', 12), ('A+', 8), ('B+', 5), ('AB+', 3),
+            ('O-', 6), ('A-', 4), ('B-', 3), ('AB-', 2)
+        ]
+        for group, qty in blood_stock:
             BloodInventory.objects.get_or_create(
                 hospital=hospital,
                 blood_group=group,
@@ -162,10 +201,55 @@ class Command(BaseCommand):
                 'icon': 'bronze_badge',
             },
         )
+        Badge.objects.get_or_create(
+            name='SILVER',
+            defaults={
+                'description': 'Completed five blood donations',
+                'points_required': 500,
+                'icon': 'silver_badge',
+            },
+        )
+        Badge.objects.get_or_create(
+            name='GOLD',
+            defaults={
+                'description': 'Completed ten blood donations',
+                'points_required': 1000,
+                'icon': 'gold_badge',
+            },
+        )
+
+        # Seed sample blood request
+        BloodRequest.objects.get_or_create(
+            patient=patient_profile,
+            hospital=hospital,
+            blood_group='A+',
+            quantity=2,
+            defaults={
+                'urgency': 'HIGH',
+                'reason': 'Scheduled orthopedic surgery',
+                'status': 'PENDING',
+                'payment_status': 'PAID',
+                'payment_reference': 'SEED-PAY-001',
+            }
+        )
+
+        # Seed sample appointment
+        donor_profile = Donor.objects.get(user=donor_user)
+        Appointment.objects.get_or_create(
+            donor=donor_profile,
+            hospital=hospital,
+            scheduled_date=today + timedelta(days=3),
+            scheduled_time='10:00:00',
+            defaults={
+                'status': 'SCHEDULED',
+                'notes': 'Routine voluntary donation appointment',
+            }
+        )
 
         self.stdout.write(self.style.SUCCESS('Demo data seeded successfully.'))
         self.stdout.write('Demo accounts:')
-        self.stdout.write('  admin@lifelink.com / Admin@12345')
-        self.stdout.write('  donor@lifelink.com / Donor@12345')
-        self.stdout.write('  patient@lifelink.com / Patient@12345')
-        self.stdout.write('  staff@lifelink.com / Staff@12345')
+        self.stdout.write('  admin@lifelink.com / Admin@12345 (System Admin)')
+        self.stdout.write('  donor@lifelink.com / Donor@12345 (Donor)')
+        self.stdout.write('  patient@lifelink.com / Patient@12345 (Patient)')
+        self.stdout.write('  staff@lifelink.com / Staff@12345 (Hospital Staff)')
+        self.stdout.write('  lab@lifelink.com / Lab@12345 (Lab Technician)')

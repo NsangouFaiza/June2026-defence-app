@@ -25,6 +25,7 @@ import 'features/donors/screens/donor_list_screen.dart';
 import 'features/donors/screens/donor_details_screen.dart';
 import 'features/chat/screens/chat_screen.dart';
 import 'features/chat/screens/chat_list_screen.dart';
+import 'features/chat/screens/ai_chat_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/map/screens/hospital_locator_screen.dart';
 import 'features/appointments/screens/appointment_booking_screen.dart';
@@ -125,6 +126,7 @@ class LifeLinkApp extends ConsumerWidget {
             '/hospital-locator': (context) => const HospitalLocatorScreen(),
             '/available-blood-packs': (context) => const AvailableBloodPacksScreen(),
             '/chat-list': (context) => const ChatListScreen(),
+            '/ai-chat': (context) => const AiChatScreen(),
             '/book-appointment': (context) => const AppointmentBookingScreen(),
             '/appointment-history': (context) => const AppointmentHistoryScreen(),
             '/campaigns': (context) => const CampaignsScreen(),

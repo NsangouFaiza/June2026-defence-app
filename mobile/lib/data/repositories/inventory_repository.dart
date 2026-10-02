@@ -79,4 +79,30 @@ class InventoryRepository {
       throw Exception('Failed to reject unit: $e');
     }
   }
+
+  Future<Map<String, dynamic>> checkBloodAvailability(String bloodGroup, int quantity) async {
+    try {
+      final response = await _apiService.get(
+        '/inventory/check_availability/',
+        queryParameters: {
+          'blood_group': bloodGroup,
+          'quantity': quantity,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      } else if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {'hospitals': []};
+    } catch (e) {
+      if (e is DioException && e.response?.data != null) {
+        final d = e.response!.data;
+        if (d is Map && d.containsKey('error')) {
+          throw Exception(d['error']);
+        }
+      }
+      throw Exception('Failed to check blood availability: ');
+    }
+  }
 }

@@ -137,7 +137,7 @@ def register(request):
                 defaults={'hospital': hospital, 'position': request.data.get('position', 'Staff')}
             )
 
-            requires_payment = not hospital.is_subscription_active
+            requires_payment = False
             hospital_data = {
                 'id': hospital.id,
                 'name': hospital.name,

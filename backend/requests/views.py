@@ -89,66 +89,108 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """Approve a blood request (hospital staff only)."""
         if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Unauthorized: Only hospital staff and administrators can approve blood requests.'}, status=status.HTTP_403_FORBIDDEN)
 
         blood_request = self.get_object()
-        
+
+        # Check staff hospital assignment
+        staff_profile = getattr(request.user, 'hospital_staff', None)
+        if not staff_profile and request.user.role in ('hospital_staff', 'blood_bank_admin'):
+            from hospitals.models import HospitalStaff
+            staff_profile = HospitalStaff.objects.filter(user=request.user).first()
+
+        if staff_profile and staff_profile.hospital and blood_request.hospital:
+            if request.user.role != 'system_admin' and staff_profile.hospital.id != blood_request.hospital.id:
+                return Response(
+                    {'error': f'Unauthorized: You are assigned to {staff_profile.hospital.name}, but this request is assigned to {blood_request.hospital.name}.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Check hospital active subscription
+        if blood_request.hospital and not blood_request.hospital.is_subscription_active:
+            return Response(
+                {'error': f'Unable to approve this request: {blood_request.hospital.name} does not have an active subscription.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if blood_request.status in ('APPROVED', 'FULFILLED', 'REJECTED', 'CANCELLED'):
+            return Response(
+                {'error': f'Unable to approve this request: request has already been {blood_request.status.lower()}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         fulfillment_type = request.data.get('fulfillment_type')
         if not fulfillment_type or fulfillment_type not in ('DIRECT_DONATION', 'INVENTORY'):
             return Response(
-                {'error': 'Fulfillment type must be specified: either DIRECT_DONATION or INVENTORY.'},
+                {'error': 'Unable to approve this request: fulfillment source must be specified as either DIRECT_DONATION or INVENTORY.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         if fulfillment_type == 'INVENTORY':
-            # Check hospital inventory for available blood units matching the group
             from inventory.models import BloodInventory
             from django.db.models import Sum
-            
+            from django.utils import timezone
+            import uuid
+
+            now_date = timezone.now().date()
             total_available = BloodInventory.objects.filter(
                 hospital=blood_request.hospital,
                 blood_group=blood_request.blood_group,
-                status='available'
+                status='available',
+                expiration_date__gte=now_date
             ).aggregate(total=Sum('quantity'))['total'] or 0
-            
+
             if total_available < blood_request.quantity:
                 return Response(
-                    {'error': f"Insufficient inventory: Only {total_available} unit(s) of {blood_request.blood_group} blood available, but {blood_request.quantity} unit(s) requested."},
+                    {'error': f"Unable to approve this request: insufficient blood inventory. Only {total_available} unit(s) of {blood_request.blood_group} blood available, but {blood_request.quantity} unit(s) requested."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Do NOT decrement inventory immediately. Mark fulfillment type and keep PENDING
+
+            # Check if an invoice is already pending
+            from payments.models import Payment
+            existing_invoice = Payment.objects.filter(
+                blood_request=blood_request,
+                status='PENDING'
+            ).first()
+
+            if blood_request.fulfillment_type == 'INVENTORY' and blood_request.payment_status == 'PENDING' and existing_invoice:
+                return Response(
+                    {'error': f'Unable to approve this request: an invoice for 25 FCFA (Ref: {existing_invoice.transaction_id}) is already pending patient payment.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Mark request as pending payment
             blood_request.status = 'PENDING'
             blood_request.payment_status = 'PENDING'
             blood_request.fulfillment_type = 'INVENTORY'
             blood_request.donor = None
             blood_request.processed_by = request.user
             blood_request.save()
-            
-            # Create a 25 FCFA Payment request / invoice
-            from payments.models import Payment
-            from django.utils import timezone
-            transaction_id = f'INV-{blood_request.patient.user.id}-{blood_request.id}-{timezone.now().timestamp():.0f}'
-            Payment.objects.create(
-                user=blood_request.patient.user,
-                blood_request=blood_request,
-                amount=25.0,
-                payment_method='MTN_MOMO', # Default MoMo payment channel
-                transaction_id=transaction_id,
-                status='PENDING',
-            )
-            
-            # Save history log
+
+            if not existing_invoice:
+                transaction_id = f'INV-{blood_request.patient.user.id}-{blood_request.id}-{int(timezone.now().timestamp())}-{uuid.uuid4().hex[:4].upper()}'
+                Payment.objects.create(
+                    user=blood_request.patient.user,
+                    blood_request=blood_request,
+                    hospital=blood_request.hospital,
+                    amount=25.0,
+                    payment_method='MTN_MOMO',
+                    transaction_id=transaction_id,
+                    status='PENDING',
+                    payment_status='PENDING',
+                    payment_type='BLOOD_REQUEST_PAYMENT',
+                )
+
             from audit.models import AuditLog
             AuditLog.objects.create(
                 user=request.user,
                 action='UPDATE',
                 model_name='BloodRequest',
                 object_id=str(blood_request.id),
-                description=f"Staff classified blood request from inventory. Invoice {transaction_id} generated for 25 FCFA.",
+                description=f"Staff approved blood request from inventory. 25 FCFA processing invoice pending patient payment.",
                 changes={'fulfillment_type': 'INVENTORY', 'status': 'PENDING', 'payment_status': 'PENDING'}
             )
-            
+
         else: # DIRECT_DONATION
             donor_id = request.data.get('donor_id')
             assigned_donor = None
@@ -158,20 +200,19 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                     assigned_donor = Donor.objects.get(pk=donor_id)
                     blood_request.donor = assigned_donor
                 except Donor.DoesNotExist:
-                    return Response({'error': 'Invalid donor ID'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': 'Unable to approve this request: specified donor was not found.'}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 blood_request.donor = None
-                
+
             blood_request.status = 'APPROVED'
-            blood_request.payment_status = 'PAID' # Free direct donation
+            blood_request.payment_status = 'PAID'
             blood_request.fulfillment_type = 'DIRECT_DONATION'
             blood_request.processed_by = request.user
             blood_request.save()
 
             if assigned_donor:
                 self._schedule_direct_donation_appointment(blood_request, assigned_donor)
-            
-            # Save history log
+
             from audit.models import AuditLog
             AuditLog.objects.create(
                 user=request.user,
@@ -326,9 +367,62 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
     def fulfill(self, request, pk=None):
         """Mark request as fulfilled (hospital staff only)."""
         if request.user.role not in ('hospital_staff', 'blood_bank_admin', 'system_admin'):
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Unauthorized: Only hospital staff and administrators can fulfill blood requests.'}, status=status.HTTP_403_FORBIDDEN)
 
         blood_request = self.get_object()
+
+        staff_profile = getattr(request.user, 'hospital_staff', None)
+        if not staff_profile and request.user.role in ('hospital_staff', 'blood_bank_admin'):
+            from hospitals.models import HospitalStaff
+            staff_profile = HospitalStaff.objects.filter(user=request.user).first()
+
+        if staff_profile and staff_profile.hospital and blood_request.hospital:
+            if request.user.role != 'system_admin' and staff_profile.hospital.id != blood_request.hospital.id:
+                return Response(
+                    {'error': f'Unauthorized: You are assigned to {staff_profile.hospital.name}, but this request belongs to {blood_request.hospital.name}.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        if blood_request.status == 'FULFILLED':
+            return Response({'error': 'This blood request has already been marked as fulfilled.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if blood_request.fulfillment_type == 'INVENTORY' and blood_request.payment_status != 'PAID':
+            return Response(
+                {'error': 'Unable to fulfill request: the 25 FCFA processing invoice must be paid by the patient before fulfillment.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if blood_request.fulfillment_type == 'INVENTORY':
+            from inventory.models import BloodInventory
+            from django.utils import timezone
+            inv_units = BloodInventory.objects.filter(
+                hospital=blood_request.hospital,
+                blood_group=blood_request.blood_group,
+                status='available',
+                expiration_date__gte=timezone.now().date()
+            ).order_by('expiration_date')
+
+            needed = blood_request.quantity
+            total_avail = sum(u.quantity for u in inv_units)
+            if total_avail < needed:
+                return Response(
+                    {'error': f'Unable to fulfill request: insufficient blood inventory units in stock ({total_avail} available, {needed} required).'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            for unit in inv_units:
+                if needed <= 0:
+                    break
+                if unit.quantity <= needed:
+                    needed -= unit.quantity
+                    unit.quantity = 0
+                    unit.status = 'used'
+                    unit.save()
+                else:
+                    unit.quantity -= needed
+                    needed = 0
+                    unit.save()
+
         blood_request.status = 'FULFILLED'
         blood_request.save()
         serializer = self.get_serializer(blood_request)

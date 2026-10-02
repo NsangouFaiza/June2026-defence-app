@@ -20,6 +20,7 @@ import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/donor_repository.dart';
 import '../../data/repositories/health_record_repository.dart';
 import '../../data/repositories/lab_repository.dart';
+import '../../data/repositories/ai_repository.dart';
 import '../../core/utils/localization_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -92,6 +93,10 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 
 final donorRepositoryProvider = Provider<DonorRepository>((ref) {
   return DonorRepository();
+});
+
+final aiRepositoryProvider = Provider<AiRepository>((ref) {
+  return AiRepository();
 });
 
 // Localization Provider

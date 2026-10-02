@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/localization_service.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
-import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/utils/role_router.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -37,20 +35,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       try {
         final user = await authRepo.getCurrentUser();
         if (mounted) {
-          final route = user != null ? getDashboardRouteForRole(user.role) : '/home';
-          Navigator.of(context).pushReplacementNamed(route);
+          if (user != null) {
+            final route = getDashboardRouteForRole(user.role);
+            Navigator.of(context).pushReplacementNamed(route);
+          } else {
+            // Explicitly unauthorized or token expired
+            await authRepo.logout();
+            ref.invalidate(currentUserProvider);
+            if (mounted) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            }
+          }
         }
       } catch (e) {
-        await authRepo.logout();
-        ref.invalidate(currentUserProvider);
+        // Only clear persistent session if explicitly rejected with 401 Unauthorized
+        final errText = e.toString().toLowerCase();
+        if (errText.contains('401') || errText.contains('unauthorized')) {
+          await authRepo.logout();
+          ref.invalidate(currentUserProvider);
+        }
         if (mounted) {
           Navigator.of(context).pushReplacementNamed('/login');
         }
       }
     } else if (hasSeenOnboarding) {
-      Navigator.of(context).pushReplacementNamed('/login');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
     } else {
-      Navigator.of(context).pushReplacementNamed('/onboarding');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/onboarding');
+      }
     }
   }
 
