@@ -143,8 +143,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                           ElevatedButton(
                             onPressed: () async {
                               try {
+                                final myH = await ref.read(hospitalRepositoryProvider).getMyHospital();
                                 final hospitals = await ref.read(hospitalRepositoryProvider).getHospitals();
-                                final requestHospital = hospitals.firstWhere(
+                                final requestHospital = myH ?? hospitals.firstWhere(
                                   (h) => h.id == request.hospitalId || h.name == request.hospitalName,
                                   orElse: () => hospitals.first,
                                 );
@@ -314,8 +315,9 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                           ElevatedButton(
                             onPressed: () async {
                               try {
+                                final myH = await ref.read(hospitalRepositoryProvider).getMyHospital();
                                 final hospitals = await ref.read(hospitalRepositoryProvider).getHospitals();
-                                final requestHospital = hospitals.firstWhere(
+                                final requestHospital = myH ?? hospitals.firstWhere(
                                   (h) => h.id == request.hospitalId || h.name == request.hospitalName,
                                   orElse: () => hospitals.first,
                                 );
@@ -671,10 +673,17 @@ class _BloodRequestsListScreenState extends ConsumerState<BloodRequestsListScree
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      request.hospitalName ?? 'Unknown hospital',
+                      (request.hospitalName != null && request.hospitalName!.isNotEmpty)
+                          ? request.hospitalName!
+                          : 'Any eligible hospital (Open)',
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: AppTheme.onSurfaceVariant,
+                        color: (request.hospitalName != null && request.hospitalName!.isNotEmpty)
+                            ? AppTheme.onSurfaceVariant
+                            : AppTheme.primaryColor,
+                        fontWeight: (request.hospitalName != null && request.hospitalName!.isNotEmpty)
+                            ? FontWeight.normal
+                            : FontWeight.w600,
                       ),
                     ),
                   ],

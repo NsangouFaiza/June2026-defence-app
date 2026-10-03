@@ -261,7 +261,7 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
 
                 // Card Section: Hospital
                 _buildCardSection(
-                  title: 'Select Destination Hospital',
+                  title: 'Destination Hospital (Optional)',
                   action: TextButton.icon(
                     onPressed: () => showDialog(
                       context: context,
@@ -282,9 +282,15 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.search_rounded, size: 16),
-                    label: const Text('Check Availability'),
+                    label: Text(
+                      'Check Stock',
+                      style: TextStyle(fontSize: 12.sp),
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: AppTheme.primaryColor,
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                   child: _buildHospitalDropdown(),
@@ -381,17 +387,21 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.onSurface.withOpacity(0.85),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.onSurface.withOpacity(0.85),
+                  ),
                 ),
               ),
-              if (action != null) action,
+              if (action != null) ...[
+                SizedBox(width: 8.w),
+                action,
+              ],
             ],
           ),
           SizedBox(height: 16.h),
@@ -438,12 +448,15 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
                   : [],
             ),
             child: Center(
-              child: Text(
-                bg,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : AppTheme.onSurface.withOpacity(0.75),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  bg,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : AppTheme.onSurface.withOpacity(0.75),
+                  ),
                 ),
               ),
             ),
@@ -565,40 +578,135 @@ class _BloodRequestScreenState extends ConsumerState<BloodRequestScreen> {
   }
 
   Widget _buildHospitalDropdown() {
-    return DropdownButtonFormField<String>(
-      isExpanded: true,
-      value: _selectedHospitalId,
-      decoration: InputDecoration(
-        labelText: 'Destination Hospital',
-        labelStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
-        prefixIcon: const Icon(Icons.local_hospital_outlined),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
-        border: OutlineInputBorder(
+    if (_isLoadingHospitals) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
           borderRadius: BorderRadius.circular(16.r),
-          borderSide: BorderSide(color: Colors.grey[200]!),
+          border: Border.all(color: Colors.grey[200]!),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.r),
-          borderSide: BorderSide(color: Colors.grey[200]!),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18.w,
+              height: 18.w,
+              child: const CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12.w),
+            Text(
+              'Loading hospitals...',
+              style: TextStyle(color: Colors.grey[600], fontSize: 13.sp),
+            ),
+          ],
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.r),
-          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      items: _hospitals
-          .map((h) => DropdownMenuItem(
-                value: h.id.toString(),
-                child: Text(
-                  h.name,
-                  overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    final validIds = _hospitals.map((h) => h.id.toString()).toSet();
+    final effectiveValue = (_selectedHospitalId != null && validIds.contains(_selectedHospitalId))
+        ? _selectedHospitalId
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String?>(
+          isExpanded: true,
+          value: effectiveValue,
+          decoration: InputDecoration(
+            labelText: 'Preferred Hospital (Optional)',
+            labelStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
+            hintText: 'Any Eligible Hospital (Network Broadcast)',
+            hintStyle: TextStyle(
+              fontSize: 13.sp,
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+            prefixIcon: const Icon(Icons.local_hospital_outlined),
+            suffixIcon: _selectedHospitalId != null
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    tooltip: 'Clear selection',
+                    onPressed: () {
+                      setState(() {
+                        _selectedHospitalId = null;
+                        _selectedHospitalName = null;
+                        _hospitalController.clear();
+                      });
+                    },
+                  )
+                : null,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: Text(
+                'Any Available Hospital (Network Wide)',
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.sp,
                 ),
-              ))
-          .toList(),
-      onChanged: (value) => setState(() => _selectedHospitalId = value),
-      validator: (value) => value == null ? 'Please select a hospital' : null,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            ..._hospitals.map((h) => DropdownMenuItem<String?>(
+                  value: h.id.toString(),
+                  child: Text(
+                    h.name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedHospitalId = value;
+              if (value != null) {
+                final match = _hospitals.where((h) => h.id.toString() == value);
+                _selectedHospitalName = match.isNotEmpty ? match.first.name : null;
+                _hospitalController.text = _selectedHospitalName ?? '';
+              } else {
+                _selectedHospitalName = null;
+                _hospitalController.clear();
+              }
+            });
+          },
+          validator: null,
+        ),
+        SizedBox(height: 8.h),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, size: 14.sp, color: Colors.grey[500]),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                _selectedHospitalId == null
+                    ? 'No specific hospital selected. Any eligible hospital in the LifeLink network can accept and fulfill this request.'
+                    : 'Request will be directed to $_selectedHospitalName.',
+                style: TextStyle(fontSize: 11.sp, color: Colors.grey[600], height: 1.3),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -374,7 +374,9 @@ class _BloodInventoryScreenState extends ConsumerState<BloodInventoryScreen> {
             itemBuilder: (context, index) {
               final bloodGroup = AppConstants.bloodGroups[index];
               final items = groupedInventory[bloodGroup] ?? [];
-              final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+              final totalQuantity = items
+                  .where((item) => item.status.toLowerCase() == 'available' && !item.expirationDate.isBefore(DateTime.now()))
+                  .fold<int>(0, (sum, item) => sum + item.quantity);
               final isLowStock = totalQuantity < 5;
 
               return Card(

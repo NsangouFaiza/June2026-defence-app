@@ -56,7 +56,9 @@ class BloodRequestSerializer(serializers.ModelSerializer):
 
     def get_hospital_data(self, obj):
         from hospitals.serializers import HospitalSerializer
-        return HospitalSerializer(obj.hospital).data
+        if obj.hospital:
+            return HospitalSerializer(obj.hospital).data
+        return None
 
     def to_internal_value(self, data):
         if hasattr(data, 'copy'):
@@ -82,9 +84,6 @@ class BloodRequestSerializer(serializers.ModelSerializer):
         attrs['reason'] = attrs.get('reason') or ''
         attrs['notes'] = attrs.get('notes') or ''
 
-        if not hospital_id and not is_emergency:
-            raise serializers.ValidationError({'hospital_id': 'This field is required.'})
-
         if patient_id:
             from patients.models import Patient
             try:
@@ -98,11 +97,8 @@ class BloodRequestSerializer(serializers.ModelSerializer):
                 attrs['hospital'] = Hospital.objects.get(pk=hospital_id)
             except Hospital.DoesNotExist:
                 raise serializers.ValidationError({'hospital_id': 'Invalid hospital ID'})
-        elif is_emergency and not hospital_id:
-            from hospitals.models import Hospital
-            first_h = Hospital.objects.filter(is_active=True).first() or Hospital.objects.first()
-            if first_h:
-                attrs['hospital'] = first_h
+        else:
+            attrs['hospital'] = None
 
         if donor_id:
             from donors.models import Donor

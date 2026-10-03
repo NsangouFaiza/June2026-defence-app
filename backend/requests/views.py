@@ -99,12 +99,11 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             from hospitals.models import HospitalStaff
             staff_profile = HospitalStaff.objects.filter(user=request.user).first()
 
-        if staff_profile and staff_profile.hospital and blood_request.hospital:
-            if request.user.role != 'system_admin' and staff_profile.hospital.id != blood_request.hospital.id:
-                return Response(
-                    {'error': f'Unauthorized: You are assigned to {staff_profile.hospital.name}, but this request is assigned to {blood_request.hospital.name}.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        # Any hospital staff can supply blood and validate/approve a request even if not originally directed to their hospital.
+        # The validating staff's hospital becomes the supplying hospital.
+        if staff_profile and staff_profile.hospital:
+            blood_request.hospital = staff_profile.hospital
+            blood_request.save(update_fields=['hospital'])
 
         # Check hospital active subscription
         if blood_request.hospital and not blood_request.hospital.is_subscription_active:
@@ -128,23 +127,57 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
 
         if fulfillment_type == 'INVENTORY':
             from inventory.models import BloodInventory
-            from django.db.models import Sum
+            from django.db.models import Sum, Q
             from django.utils import timezone
             import uuid
 
             now_date = timezone.now().date()
-            total_available = BloodInventory.objects.filter(
-                hospital=blood_request.hospital,
-                blood_group=blood_request.blood_group,
-                status='available',
-                expiration_date__gte=now_date
-            ).aggregate(total=Sum('quantity'))['total'] or 0
-
-            if total_available < blood_request.quantity:
+            hospital = blood_request.hospital or (staff_profile.hospital if staff_profile else None)
+            if not hospital:
                 return Response(
-                    {'error': f"Unable to approve this request: insufficient blood inventory. Only {total_available} unit(s) of {blood_request.blood_group} blood available, but {blood_request.quantity} unit(s) requested."},
+                    {'error': 'Unable to approve this request: supplying hospital could not be determined.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+            req_blood_group = (blood_request.blood_group or '').strip()
+            req_quantity = int(blood_request.quantity)
+
+            # Query available units matching hospital and blood group
+            available_qs = BloodInventory.objects.filter(
+                hospital=hospital,
+                blood_group__iexact=req_blood_group,
+                status__iexact='available'
+            ).filter(Q(expiration_date__isnull=True) | Q(expiration_date__gte=now_date))
+
+            total_available = available_qs.aggregate(total=Sum('quantity'))['total'] or 0
+
+            if total_available < req_quantity:
+                return Response(
+                    {'error': f"Unable to approve this request: insufficient blood inventory. Only {total_available} unit(s) of {blood_request.blood_group} blood available, but {req_quantity} unit(s) requested."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Deduct exactly req_quantity from matching inventory units (FIFO by expiration date)
+            remaining_to_deduct = req_quantity
+            matching_inventories = available_qs.order_by('expiration_date', 'id')
+            for inv in matching_inventories:
+                if remaining_to_deduct <= 0:
+                    break
+                if inv.quantity >= remaining_to_deduct:
+                    inv.quantity -= remaining_to_deduct
+                    remaining_to_deduct = 0
+                    if inv.quantity == 0:
+                        inv.status = 'used'
+                    inv.save()
+                else:
+                    remaining_to_deduct -= inv.quantity
+                    inv.quantity = 0
+                    inv.status = 'used'
+                    inv.save()
+
+            current_notes = blood_request.notes or ''
+            if '[INVENTORY_DEDUCTED]' not in current_notes:
+                blood_request.notes = f"{current_notes}\n[INVENTORY_DEDUCTED]".strip()
 
             # Check if an invoice is already pending
             from payments.models import Payment
@@ -153,14 +186,8 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                 status='PENDING'
             ).first()
 
-            if blood_request.fulfillment_type == 'INVENTORY' and blood_request.payment_status == 'PENDING' and existing_invoice:
-                return Response(
-                    {'error': f'Unable to approve this request: an invoice for 25 FCFA (Ref: {existing_invoice.transaction_id}) is already pending patient payment.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Mark request as pending payment
-            blood_request.status = 'PENDING'
+            # Mark request as approved pending payment
+            blood_request.status = 'APPROVED'
             blood_request.payment_status = 'PENDING'
             blood_request.fulfillment_type = 'INVENTORY'
             blood_request.donor = None
@@ -187,8 +214,8 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                 action='UPDATE',
                 model_name='BloodRequest',
                 object_id=str(blood_request.id),
-                description=f"Staff approved blood request from inventory. 25 FCFA processing invoice pending patient payment.",
-                changes={'fulfillment_type': 'INVENTORY', 'status': 'PENDING', 'payment_status': 'PENDING'}
+                description=f"Staff approved blood request from inventory. Deducted {req_quantity} unit(s) of {req_blood_group}. 25 FCFA processing invoice pending patient payment.",
+                changes={'fulfillment_type': 'INVENTORY', 'status': 'APPROVED', 'payment_status': 'PENDING', 'deducted_quantity': req_quantity}
             )
 
         else: # DIRECT_DONATION
@@ -233,6 +260,15 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         blood_request = self.get_object()
+
+        staff_profile = getattr(request.user, 'hospital_staff', None)
+        if not staff_profile and request.user.role in ('hospital_staff', 'blood_bank_admin'):
+            from hospitals.models import HospitalStaff
+            staff_profile = HospitalStaff.objects.filter(user=request.user).first()
+
+        if not blood_request.hospital and staff_profile and staff_profile.hospital:
+            blood_request.hospital = staff_profile.hospital
+            blood_request.save(update_fields=['hospital'])
         
         new_type = request.data.get('fulfillment_type')
         if not new_type or new_type not in ('DIRECT_DONATION', 'INVENTORY'):
@@ -357,6 +393,29 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
 
         blood_request = self.get_object()
         reason = request.data.get('reason', '')
+
+        # If inventory was previously deducted for this request, refund it back
+        if blood_request.fulfillment_type == 'INVENTORY' and '[INVENTORY_DEDUCTED]' in (blood_request.notes or ''):
+            from inventory.models import BloodInventory
+            from datetime import date, timedelta
+            today = date.today()
+            inv_record, created = BloodInventory.objects.get_or_create(
+                hospital=blood_request.hospital,
+                blood_group=blood_request.blood_group,
+                collection_date=today,
+                defaults={
+                    'quantity': blood_request.quantity,
+                    'expiration_date': today + timedelta(days=42),
+                    'status': 'available'
+                }
+            )
+            if not created:
+                inv_record.quantity += blood_request.quantity
+                if inv_record.status == 'used':
+                    inv_record.status = 'available'
+                inv_record.save()
+            blood_request.notes = (blood_request.notes or '').replace('[INVENTORY_DEDUCTED]', '').strip()
+
         blood_request.status = 'REJECTED'
         blood_request.reason = reason
         blood_request.save()
@@ -376,12 +435,11 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             from hospitals.models import HospitalStaff
             staff_profile = HospitalStaff.objects.filter(user=request.user).first()
 
-        if staff_profile and staff_profile.hospital and blood_request.hospital:
-            if request.user.role != 'system_admin' and staff_profile.hospital.id != blood_request.hospital.id:
-                return Response(
-                    {'error': f'Unauthorized: You are assigned to {staff_profile.hospital.name}, but this request belongs to {blood_request.hospital.name}.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        # Any hospital staff can fulfill and supply blood for the request even if not originally directed to their hospital.
+        # The fulfilling staff's hospital supplies the blood.
+        if staff_profile and staff_profile.hospital:
+            blood_request.hospital = staff_profile.hospital
+            blood_request.save(update_fields=['hospital'])
 
         if blood_request.status == 'FULFILLED':
             return Response({'error': 'This blood request has already been marked as fulfilled.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -393,35 +451,38 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
             )
 
         if blood_request.fulfillment_type == 'INVENTORY':
-            from inventory.models import BloodInventory
-            from django.utils import timezone
-            inv_units = BloodInventory.objects.filter(
-                hospital=blood_request.hospital,
-                blood_group=blood_request.blood_group,
-                status='available',
-                expiration_date__gte=timezone.now().date()
-            ).order_by('expiration_date')
+            # Deduct only if not already deducted during validation/approval
+            if '[INVENTORY_DEDUCTED]' not in (blood_request.notes or ''):
+                from inventory.models import BloodInventory
+                from django.utils import timezone
+                from django.db.models import Q
+                inv_units = BloodInventory.objects.filter(
+                    hospital=blood_request.hospital,
+                    blood_group__iexact=blood_request.blood_group.strip(),
+                    status__iexact='available'
+                ).filter(Q(expiration_date__isnull=True) | Q(expiration_date__gte=timezone.now().date())).order_by('expiration_date', 'id')
 
-            needed = blood_request.quantity
-            total_avail = sum(u.quantity for u in inv_units)
-            if total_avail < needed:
-                return Response(
-                    {'error': f'Unable to fulfill request: insufficient blood inventory units in stock ({total_avail} available, {needed} required).'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                needed = blood_request.quantity
+                total_avail = sum(u.quantity for u in inv_units)
+                if total_avail < needed:
+                    return Response(
+                        {'error': f'Unable to fulfill request: insufficient blood inventory units in stock ({total_avail} available, {needed} required).'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-            for unit in inv_units:
-                if needed <= 0:
-                    break
-                if unit.quantity <= needed:
-                    needed -= unit.quantity
-                    unit.quantity = 0
-                    unit.status = 'used'
-                    unit.save()
-                else:
-                    unit.quantity -= needed
-                    needed = 0
-                    unit.save()
+                for unit in inv_units:
+                    if needed <= 0:
+                        break
+                    if unit.quantity <= needed:
+                        needed -= unit.quantity
+                        unit.quantity = 0
+                        unit.status = 'used'
+                        unit.save()
+                    else:
+                        unit.quantity -= needed
+                        needed = 0
+                        unit.save()
+                blood_request.notes = f"{blood_request.notes or ''}\n[INVENTORY_DEDUCTED]".strip()
 
         blood_request.status = 'FULFILLED'
         blood_request.save()
@@ -483,6 +544,16 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
         appointment = Appointment.objects.filter(blood_request=blood_request).first()
         tomorrow = timezone.now().date() + timedelta(days=1)
         
+        if not blood_request.hospital:
+            from hospitals.models import Hospital
+            first_h = Hospital.objects.filter(is_active=True).first() or Hospital.objects.first()
+            if first_h:
+                blood_request.hospital = first_h
+                blood_request.save(update_fields=['hospital'])
+
+        h_name = blood_request.hospital.name if blood_request.hospital else 'LifeLink Partner Hospital'
+        h_address = (blood_request.hospital.address if blood_request.hospital else '') or 'Hospital Clinic'
+
         if not appointment:
             appointment = Appointment.objects.create(
                 donor=donor,
@@ -499,7 +570,7 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                 recipient=donor.user,
                 notification_type='APPOINTMENT_REMINDER',
                 title='Direct Donation Scheduled / Don Direct Planifié',
-                message=f"An emergency appointment has been scheduled for you to donate blood at {blood_request.hospital.name} for request ref #{blood_request.id}.\nDate: {tomorrow}\nTime: 09:00 AM\nLocation: {blood_request.hospital.address or 'Hospital Clinic'}.",
+                message=f"An emergency appointment has been scheduled for you to donate blood at {h_name} for request ref #{blood_request.id}.\nDate: {tomorrow}\nTime: 09:00 AM\nLocation: {h_address}.",
                 data={'blood_request_id': blood_request.id, 'appointment_id': appointment.id}
             )
             
@@ -508,7 +579,7 @@ class BloodRequestViewSet(viewsets.ModelViewSet):
                 recipient=blood_request.patient.user,
                 notification_type='REQUEST_UPDATE',
                 title='Donor Assigned & Appointment Scheduled / Donneur Assigné & RDV Planifié',
-                message=f"A compatible donor ({donor.user.full_name}) has been assigned to your blood request ref #{blood_request.id}.\nAppointment Scheduled at {blood_request.hospital.name}.\nDate: {tomorrow}\nTime: 09:00 AM.",
+                message=f"A compatible donor ({donor.user.full_name}) has been assigned to your blood request ref #{blood_request.id}.\nAppointment Scheduled at {h_name}.\nDate: {tomorrow}\nTime: 09:00 AM.",
                 data={'blood_request_id': blood_request.id, 'appointment_id': appointment.id}
             )
         else:

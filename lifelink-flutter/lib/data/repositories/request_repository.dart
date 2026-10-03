@@ -85,7 +85,7 @@ class RequestRepository {
 
   Future<void> cancelRequest(int id) async {
     try {
-      await _apiService.post('/requests//cancel/');
+      await _apiService.post('/requests/$id/cancel/');
     } catch (e) {
       throw Exception(_extractError(e, 'Failed to cancel request: '));
     }
@@ -93,7 +93,7 @@ class RequestRepository {
 
   Future<BloodRequestModel> approveRequest(int id, String fulfillmentType, {int? donorId}) async {
     try {
-      final response = await _apiService.post('/requests//approve/', {
+      final response = await _apiService.post('/requests/$id/approve/', {
         'fulfillment_type': fulfillmentType,
         if (donorId != null) 'donor_id': donorId,
       });
@@ -105,7 +105,7 @@ class RequestRepository {
 
   Future<BloodRequestModel> updateFulfillment(int id, String fulfillmentType, {int? donorId}) async {
     try {
-      final response = await _apiService.post('/requests//update-fulfillment/', {
+      final response = await _apiService.post('/requests/$id/update-fulfillment/', {
         'fulfillment_type': fulfillmentType,
         if (donorId != null) 'donor_id': donorId,
       });
@@ -117,7 +117,7 @@ class RequestRepository {
 
   Future<BloodRequestModel> rejectRequest(int id, String reason) async {
     try {
-      final response = await _apiService.post('/requests//reject/', {'reason': reason});
+      final response = await _apiService.post('/requests/$id/reject/', {'reason': reason});
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
       throw Exception(_extractError(e, 'Failed to reject request: '));
@@ -126,7 +126,7 @@ class RequestRepository {
 
   Future<BloodRequestModel> fulfillRequest(int id) async {
     try {
-      final response = await _apiService.post('/requests//fulfill/');
+      final response = await _apiService.post('/requests/$id/fulfill/');
       return BloodRequestModel.fromJson(response.data);
     } catch (e) {
       throw Exception(_extractError(e, 'Failed to fulfill request: '));

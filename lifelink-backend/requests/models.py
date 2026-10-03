@@ -21,7 +21,7 @@ URGENCY_CHOICES = (
 
 class BloodRequest(models.Model):
     patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='blood_requests')
-    hospital = models.ForeignKey('hospitals.Hospital', on_delete=models.CASCADE, related_name='blood_requests')
+    hospital = models.ForeignKey('hospitals.Hospital', on_delete=models.SET_NULL, null=True, blank=True, related_name='blood_requests')
     blood_group = models.CharField(max_length=3, choices=[
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
         ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-'),

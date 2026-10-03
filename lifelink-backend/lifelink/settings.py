@@ -97,16 +97,10 @@ CHANNEL_LAYERS = {
 }
 
 # Database
-# Canonical persistent SQLite database configuration across backend directories
-PROJECT_ROOT = BASE_DIR.parent if BASE_DIR.name in ('backend', 'lifelink-backend') else BASE_DIR
-CANONICAL_DB = PROJECT_ROOT / 'backend' / 'db.sqlite3'
-if not CANONICAL_DB.exists():
-    CANONICAL_DB = BASE_DIR / 'db.sqlite3'
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': CANONICAL_DB,
+        'NAME': BASE_DIR / 'db.sqlite3',
         'OPTIONS': {
             'timeout': 60,
         },

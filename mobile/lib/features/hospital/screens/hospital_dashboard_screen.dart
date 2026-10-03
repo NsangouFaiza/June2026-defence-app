@@ -11,6 +11,8 @@ import '../../../../data/repositories/auth_repository.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
 import '../../payment/screens/receipt_history_screen.dart';
 import '../../../widgets/floating_ai_assistant_button.dart';
+import '../../../../data/models/blood_inventory_model.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class HospitalDashboardScreen extends ConsumerStatefulWidget {
   const HospitalDashboardScreen({super.key});
@@ -23,16 +25,19 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
   HospitalModel? _hospital;
   bool _isInitialized = false;
   late Future<HospitalModel?> _hospitalFuture;
+  late Future<List<BloodInventoryModel>> _inventoryFuture;
 
   @override
   void initState() {
     super.initState();
     _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
+    _inventoryFuture = ref.read(inventoryRepositoryProvider).getInventory();
   }
 
   void _refreshData() {
     setState(() {
       _hospitalFuture = ref.read(hospitalRepositoryProvider).getMyHospital();
+      _inventoryFuture = ref.read(inventoryRepositoryProvider).getInventory();
       _isInitialized = false;
     });
   }
@@ -634,29 +639,52 @@ class _HospitalDashboardScreenState extends ConsumerState<HospitalDashboardScree
                                   ),
                                 ),
                                 TextButton(
-                                  onPressed: () => Navigator.of(context).pushNamed('/blood-inventory'),
+                                  onPressed: () async {
+                                    await Navigator.of(context).pushNamed('/blood-inventory');
+                                    _refreshData();
+                                  },
                                   child: const Text('View All'),
                                 ),
                               ],
                             ),
                             SizedBox(height: 12.h),
-                            GridView.count(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 4,
-                              mainAxisSpacing: 10.w,
-                              crossAxisSpacing: 10.w,
-                              childAspectRatio: 0.85,
-                              children: [
-                                _buildBloodGroupCard('A+', 45, AppTheme.success),
-                                _buildBloodGroupCard('A-', 23, AppTheme.warning),
-                                _buildBloodGroupCard('B+', 38, AppTheme.success),
-                                _buildBloodGroupCard('B-', 15, AppTheme.error),
-                                _buildBloodGroupCard('O+', 67, AppTheme.success),
-                                _buildBloodGroupCard('O-', 31, AppTheme.warning),
-                                _buildBloodGroupCard('AB+', 12, AppTheme.success),
-                                _buildBloodGroupCard('AB-', 8, AppTheme.error),
-                              ],
+                            FutureBuilder<List<BloodInventoryModel>>(
+                              future: _inventoryFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return SizedBox(
+                                    height: 120.h,
+                                    child: const Center(child: CircularProgressIndicator()),
+                                  );
+                                }
+                                final inventory = snapshot.data ?? [];
+                                final stockMap = <String, int>{};
+                                for (final item in inventory) {
+                                  if (item.status.toLowerCase() == 'available' &&
+                                      !item.expirationDate.isBefore(DateTime.now())) {
+                                    stockMap[item.bloodGroup] =
+                                        (stockMap[item.bloodGroup] ?? 0) + item.quantity;
+                                  }
+                                }
+
+                                return GridView.count(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  crossAxisCount: 4,
+                                  mainAxisSpacing: 10.w,
+                                  crossAxisSpacing: 10.w,
+                                  childAspectRatio: 0.85,
+                                  children: AppConstants.bloodGroups.map((group) {
+                                    final count = stockMap[group] ?? 0;
+                                    final Color color = count >= 10
+                                        ? AppTheme.success
+                                        : count >= 5
+                                            ? AppTheme.warning
+                                            : AppTheme.error;
+                                    return _buildBloodGroupCard(group, count, color);
+                                  }).toList(),
+                                );
+                              },
                             ),
                           ],
                         ),

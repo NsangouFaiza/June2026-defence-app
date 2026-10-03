@@ -550,44 +550,45 @@ def process_successful_payment(
             if req.status == 'PENDING':
                 req.status = 'CONFIRMED'
             
-            # Deduct inventory if fulfillment type is INVENTORY
+            # Deduct inventory if fulfillment type is INVENTORY and not already deducted
             if req.fulfillment_type == 'INVENTORY':
                 req.status = 'CONFIRMED'
                 
-                from inventory.models import BloodInventory
-                from django.db.models import Sum
-                
-                total_available = BloodInventory.objects.filter(
-                    hospital=req.hospital,
-                    blood_group=req.blood_group,
-                    status='available'
-                ).aggregate(total=Sum('quantity'))['total'] or 0
-                
-                if total_available >= req.quantity:
-                    remaining = req.quantity
-                    inventories = BloodInventory.objects.filter(
-                        hospital=req.hospital,
-                        blood_group=req.blood_group,
-                        status='available'
-                    ).order_by('expiration_date')
+                if '[INVENTORY_DEDUCTED]' not in (req.notes or ''):
+                    from inventory.models import BloodInventory
+                    from django.db.models import Sum, Q
+                    from django.utils import timezone
                     
-                    for inv in inventories:
-                        if remaining <= 0:
-                            break
-                        if inv.quantity >= remaining:
-                            inv.quantity -= remaining
-                            if inv.quantity == 0:
+                    available_qs = BloodInventory.objects.filter(
+                        hospital=req.hospital,
+                        blood_group__iexact=req.blood_group.strip(),
+                        status__iexact='available'
+                    ).filter(Q(expiration_date__isnull=True) | Q(expiration_date__gte=timezone.now().date()))
+                    
+                    total_available = available_qs.aggregate(total=Sum('quantity'))['total'] or 0
+                    
+                    if total_available >= req.quantity:
+                        remaining = req.quantity
+                        inventories = available_qs.order_by('expiration_date', 'id')
+                        
+                        for inv in inventories:
+                            if remaining <= 0:
+                                break
+                            if inv.quantity >= remaining:
+                                inv.quantity -= remaining
+                                if inv.quantity == 0:
+                                    inv.status = 'used'
+                                inv.save()
+                                remaining = 0
+                            else:
+                                remaining -= inv.quantity
+                                inv.quantity = 0
                                 inv.status = 'used'
-                            inv.save()
-                            remaining = 0
-                        else:
-                            remaining -= inv.quantity
-                            inv.quantity = 0
-                            inv.status = 'used'
-                            inv.save()
-                    logger.info(f"[PaymentsTrace] Deducted {req.quantity} units of {req.blood_group} from {req.hospital.name} inventory.")
-                else:
-                    logger.warning(f"[PaymentsTrace] Inventory insufficient for request #{req.id}. Marked as PAID/CONFIRMED for fulfillment.")
+                                inv.save()
+                        req.notes = f"{req.notes or ''}\n[INVENTORY_DEDUCTED]".strip()
+                        logger.info(f"[PaymentsTrace] Deducted {req.quantity} units of {req.blood_group} from {req.hospital.name} inventory.")
+                    else:
+                        logger.warning(f"[PaymentsTrace] Inventory insufficient for request #{req.id}. Marked as PAID/CONFIRMED for fulfillment.")
                     
             req.save()
             logger.info(f"[PaymentsTrace] Blood Request #{req.id} marked PAID and status updated to {req.status}.")

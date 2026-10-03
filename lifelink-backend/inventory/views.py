@@ -31,6 +31,17 @@ class BloodInventoryViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [IsStaffOrTechnicianOrAdmin()]
 
+    def get_queryset(self):
+        user = self.request.user
+        queryset = BloodInventory.objects.all()
+        if user and user.is_authenticated and user.role in ('hospital_staff', 'blood_bank_admin') and not user.is_staff and not (user.role == 'system_admin'):
+            from hospitals.models import HospitalStaff
+            staff = HospitalStaff.objects.filter(user=user).first()
+            if staff and staff.hospital:
+                if not self.request.query_params.get('hospital'):
+                    queryset = queryset.filter(hospital=staff.hospital)
+        return queryset
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """Search blood inventory by filters."""
