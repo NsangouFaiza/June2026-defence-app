@@ -58,7 +58,7 @@ class HospitalViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'pay_subscription', 'subscription_history', 'invoice_detail']:
             return [permissions.AllowAny()]
-        if self.action in ['my_hospital', 'my_hospital_alias', 'statistics']:
+        if self.action in ['my_hospital', 'my_hospital_alias', 'statistics', 'toggle_active']:
             return [permissions.IsAuthenticated()]
         return [permissions.IsAdminUser()]
 
@@ -302,7 +302,7 @@ class HospitalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def toggle_active(self, request, pk=None):
         """Admin toggle for hospital active/subscription access status."""
-        if not (request.user.is_staff or request.user.role == 'system_admin' or request.user.is_superuser):
+        if not (request.user.is_staff or request.user.role in ('system_admin', 'blood_bank_admin') or request.user.is_superuser):
             return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
 
         hospital = self.get_object()
