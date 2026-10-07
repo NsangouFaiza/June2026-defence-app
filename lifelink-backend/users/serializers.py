@@ -89,6 +89,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             'gender', 'date_of_birth', 'blood_group', 'address', 'city', 'region', 'role', 'language',
         ]
 
+    # Admin accounts are created by a system admin (admin panel / createsuperuser), never via public sign-up.
+    SELF_REGISTRATION_ROLES = ('donor', 'patient', 'hospital_staff')
+
+    def validate_role(self, value):
+        if value not in self.SELF_REGISTRATION_ROLES:
+            raise serializers.ValidationError('This account type cannot be created through registration.')
+        return value
+
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("Passwords don't match.")
